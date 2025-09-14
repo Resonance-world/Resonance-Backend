@@ -31,6 +31,9 @@ const io = new Server(server, {
   }
 });
 
+// Trust proxy for proper IP detection (required for rate limiting)
+app.set('trust proxy', 1);
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes

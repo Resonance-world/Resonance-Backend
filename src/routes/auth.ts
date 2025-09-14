@@ -1,8 +1,8 @@
-import { Router } from 'express';
+import { Router, type Router as ExpressRouter } from 'express';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 
-const router = Router();
+const router: ExpressRouter = Router();
 const prisma = new PrismaClient();
 
 // World ID verification endpoint
@@ -110,13 +110,20 @@ router.post('/token', async (req, res) => {
     });
 
     // Generate JWT token
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET environment variable is not set');
+    }
+
+    const payload = { 
+      userId: user.id, 
+      walletAddress: user.walletAddress 
+    };
+    
     const token = jwt.sign(
-      { 
-        userId: user.id, 
-        walletAddress: user.walletAddress 
-      },
-      process.env.JWT_SECRET!,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      payload, 
+      jwtSecret, 
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' } as any
     );
 
     res.json({ 

@@ -12,6 +12,8 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:migrate": "prisma migrate dev",
+    "db:reset": "prisma db push --accept-data-loss --force-reset",
+    "db:clear-users": "tsx scripts/clear-users.js",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "test": "jest"

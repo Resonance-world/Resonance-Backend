@@ -1,8 +1,8 @@
-import { Router } from 'express';
+import { Router, type Router as ExpressRouter } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth.js';
 
-const router = Router();
+const router: ExpressRouter = Router();
 const prisma = new PrismaClient();
 
 // Get user profile
