@@ -19,6 +19,31 @@ router.get('/profile', authMiddleware, async (req, res) => {
         profilePictureUrl: true,
         isVerified: true,
         verificationLevel: true,
+        nullifierHash: true,
+        isActive: true,
+        onboardingCompleted: true,
+        onboardingCompletedAt: true,
+        currentAvailability: true,
+        lastActiveAt: true,
+        totalMatchesMade: true,
+        successfulConnections: true,
+        name: true,
+        dateOfBirth: true,
+        zodiacSign: true,
+        sex: true,
+        locationCountry: true,
+        locationCity: true,
+        locationLat: true,
+        locationLng: true,
+        surroundingDetail: true,
+        essenceKeywords: true,
+        essenceStory: true,
+        communicationTone: true,
+        motivationForConnection: true,
+        currentCuriosity: true,
+        personalitySummary: true,
+        annoyIndexPosition: true,
+        essenceEmbeddingUpdatedAt: true,
         createdAt: true,
         updatedAt: true
       }
@@ -39,13 +64,27 @@ router.get('/profile', authMiddleware, async (req, res) => {
 router.put('/profile', authMiddleware, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { username, profilePictureUrl } = req.body;
+    const { 
+      username, 
+      profilePictureUrl, 
+      currentAvailability,
+      locationCountry,
+      locationCity,
+      locationLat,
+      locationLng
+    } = req.body;
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
         username,
         profilePictureUrl,
+        currentAvailability,
+        locationCountry,
+        locationCity,
+        locationLat: locationLat ? parseFloat(locationLat) : undefined,
+        locationLng: locationLng ? parseFloat(locationLng) : undefined,
+        lastActiveAt: new Date(),
         updatedAt: new Date()
       },
       select: {
@@ -54,7 +93,13 @@ router.put('/profile', authMiddleware, async (req, res) => {
         username: true,
         profilePictureUrl: true,
         isVerified: true,
-        verificationLevel: true
+        verificationLevel: true,
+        currentAvailability: true,
+        locationCountry: true,
+        locationCity: true,
+        locationLat: true,
+        locationLng: true,
+        lastActiveAt: true
       }
     });
 
@@ -66,6 +111,44 @@ router.put('/profile', authMiddleware, async (req, res) => {
     res.json({ success: true, user: updatedUser });
   } catch (error) {
     console.error('❌ Update profile error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Get user by ID
+router.get('/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        walletAddress: true,
+        username: true,
+        profilePictureUrl: true,
+        isVerified: true,
+        verificationLevel: true,
+        onboardingCompleted: true,
+        currentAvailability: true,
+        lastActiveAt: true,
+        name: true,
+        zodiacSign: true,
+        essenceKeywords: true,
+        communicationTone: true,
+        motivationForConnection: true,
+        personalitySummary: true,
+        createdAt: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error('❌ Get user by ID error:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
