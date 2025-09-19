@@ -8,44 +8,69 @@ const prisma = new PrismaClient();
 // World ID verification endpoint
 router.post('/verify', async (req, res) => {
   try {
-    const { nullifier_hash, verification_level, action, walletAddress } = req.body;
+    const { nullifier_hash, verification_level, action, walletAddress, username, profilePictureUrl } = req.body;
 
     console.log('🔐 Processing World ID verification:', {
       action,
       verification_level,
       walletAddress: walletAddress?.substring(0, 10) + '...',
-      nullifier_hash: nullifier_hash?.substring(0, 10) + '...'
+      nullifier_hash: nullifier_hash?.substring(0, 10) + '...',
+      username: username || 'Not provided'
     });
 
-    // Update or create user with verification status
-    const user = await prisma.user.upsert({
-      where: { walletAddress },
-      update: {
-        nullifierHash: nullifier_hash,
-        verificationLevel: verification_level,
-        isVerified: true,
-        updatedAt: new Date()
-      },
-      create: {
-        walletAddress,
-        nullifierHash: nullifier_hash,
-        verificationLevel: verification_level,
-        isVerified: true
-      }
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { walletAddress }
     });
 
-    console.log('✅ User verification updated:', {
+    let user;
+    if (existingUser) {
+      // Update existing user
+      user = await prisma.user.update({
+        where: { walletAddress },
+        data: {
+          nullifierHash: nullifier_hash,
+          verificationLevel: verification_level,
+          isVerified: true,
+          username: username || existingUser.username,
+          profilePictureUrl: profilePictureUrl || existingUser.profilePictureUrl,
+          updatedAt: new Date()
+        }
+      });
+      console.log('✅ Existing user updated:', { userId: user.id });
+    } else {
+      // Create new user with unique ID
+      user = await prisma.user.create({
+        data: {
+          walletAddress,
+          nullifierHash: nullifier_hash,
+          verificationLevel: verification_level,
+          isVerified: true,
+          username: username || null,
+          profilePictureUrl: profilePictureUrl || null,
+          // All other fields will use their default values
+        }
+      });
+      console.log('✅ New user created:', { userId: user.id });
+    }
+
+    console.log('✅ User verification completed:', {
       userId: user.id,
-      isVerified: user.isVerified
+      walletAddress: user.walletAddress,
+      isVerified: user.isVerified,
+      isNewUser: !existingUser
     });
 
     res.json({ 
       success: true, 
-      message: 'User verified successfully',
+      message: existingUser ? 'User verified successfully' : 'User registered and verified successfully',
       user: {
         id: user.id,
         walletAddress: user.walletAddress,
-        isVerified: user.isVerified
+        username: user.username,
+        profilePictureUrl: user.profilePictureUrl,
+        isVerified: user.isVerified,
+        isNewUser: !existingUser
       }
     });
   } catch (error) {
@@ -140,6 +165,46 @@ router.post('/token', async (req, res) => {
   } catch (error) {
     console.error('❌ Token generation error:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Get user info by ID
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        walletAddress: true,
+        username: true,
+        profilePictureUrl: true,
+        isVerified: true,
+        verificationLevel: true,
+        onboardingCompleted: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      user
+    });
+  } catch (error) {
+    console.error('❌ Error fetching user info:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
   }
 });
 

@@ -11,6 +11,7 @@ import authRoutes from './routes/auth.js';
 import userRoutes from './routes/user.js';
 import messageRoutes from './routes/message.js';
 import chatbotRoutes from './routes/chatbot.js';
+import onboardingRoutes from './routes/onboarding.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -66,6 +67,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/onboarding', onboardingRoutes);
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {

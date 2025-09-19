@@ -23,6 +23,40 @@ model User {
   verificationLevel String?
   isVerified        Boolean  @default(false)
 
+  // Activity & availability
+  isActive              Boolean @default(true)
+  onboardingCompleted   Boolean @default(false)
+  onboardingCompletedAt DateTime?
+  currentAvailability   String  @default("available") // 'available', 'busy', 'away'
+  lastActiveAt          DateTime @default(now())
+  totalMatchesMade      Int     @default(0)
+  successfulConnections Int     @default(0)
+
+  // Onboarding essence data (nullable until completed)
+  name              String?
+  dateOfBirth       DateTime?
+  zodiacSign        String? // Calculated from date of birth
+  sex               String? // 'male', 'female', 'non-binary', 'other'
+  locationCountry   String?
+  locationCity      String?
+  locationLat       Decimal? @db.Decimal(10, 8)
+  locationLng       Decimal? @db.Decimal(11, 8)
+
+  // Core essence from onboarding
+  surroundingDetail         String? // Pattern breaker item description
+  essenceKeywords          String? // "When you feel most you" - 1-2 words
+  essenceStory             String? // Story that makes essence feel true
+  communicationTone        String? // 'thoughtful', 'playful', 'direct', 'poetic', 'neutral', 'all_above'
+  motivationForConnection  String? // 'new_connection', 'intellectual', 'co_creation', 'romantic'
+  currentCuriosity         String? // What they've been curious about lately
+
+  // Generated data
+  personalitySummary       String? // LLM-generated essence summary
+
+  // Annoy index integration
+  annoyIndexPosition       Int?      @unique // Position in Annoy index (set when indexed)
+  essenceEmbeddingUpdatedAt DateTime? // Track when embedding was last generated
+
   // Messaging
   sentMessages      Message[] @relation("MessageSender")
   receivedMessages  Message[] @relation("MessageReceiver")
