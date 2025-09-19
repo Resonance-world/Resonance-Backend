@@ -1,12 +1,13 @@
 import { Router, type Router as ExpressRouter } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth.js';
+import { sessionAuthMiddleware } from '../middleware/sessionAuth.js';
 
 const router: ExpressRouter = Router();
 const prisma = new PrismaClient();
 
-// Get user profile
-router.get('/profile', authMiddleware, async (req, res) => {
+// Get user profile (for authenticated users)
+router.get('/profile', sessionAuthMiddleware, async (req, res) => {
   try {
     const userId = (req as any).userId;
 
@@ -60,8 +61,8 @@ router.get('/profile', authMiddleware, async (req, res) => {
   }
 });
 
-// Update user profile
-router.put('/profile', authMiddleware, async (req, res) => {
+// Update user profile (for authenticated users)
+router.put('/profile', sessionAuthMiddleware, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { 
@@ -181,8 +182,8 @@ router.get('/wallet/:address', async (req, res) => {
   }
 });
 
-// Search users
-router.get('/search', authMiddleware, async (req, res) => {
+// Search users (for authenticated users)
+router.get('/search', sessionAuthMiddleware, async (req, res) => {
   try {
     const { query } = req.query;
 
