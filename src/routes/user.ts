@@ -43,6 +43,13 @@ router.get('/profile', sessionAuthMiddleware, async (req, res) => {
         motivationForConnection: true,
         currentCuriosity: true,
         personalitySummary: true,
+        telegramHandle: true,
+        instagramHandle: true,
+        baseFarcasterHandle: true,
+        zoraHandle: true,
+        linkedinHandle: true,
+        xHandle: true,
+        websiteUrl: true,
         annoyIndexPosition: true,
         essenceEmbeddingUpdatedAt: true,
         createdAt: true,
@@ -72,7 +79,14 @@ router.put('/profile', sessionAuthMiddleware, async (req, res) => {
       locationCountry,
       locationCity,
       locationLat,
-      locationLng
+      locationLng,
+      telegramHandle,
+      instagramHandle,
+      baseFarcasterHandle,
+      zoraHandle,
+      linkedinHandle,
+      xHandle,
+      websiteUrl
     } = req.body;
 
     const updatedUser = await prisma.user.update({
@@ -85,6 +99,13 @@ router.put('/profile', sessionAuthMiddleware, async (req, res) => {
         locationCity,
         locationLat: locationLat ? parseFloat(locationLat) : undefined,
         locationLng: locationLng ? parseFloat(locationLng) : undefined,
+        telegramHandle,
+        instagramHandle,
+        baseFarcasterHandle,
+        zoraHandle,
+        linkedinHandle,
+        xHandle,
+        websiteUrl,
         lastActiveAt: new Date(),
         updatedAt: new Date()
       },
@@ -100,6 +121,13 @@ router.put('/profile', sessionAuthMiddleware, async (req, res) => {
         locationCity: true,
         locationLat: true,
         locationLng: true,
+        telegramHandle: true,
+        instagramHandle: true,
+        baseFarcasterHandle: true,
+        zoraHandle: true,
+        linkedinHandle: true,
+        xHandle: true,
+        websiteUrl: true,
         lastActiveAt: true
       }
     });
@@ -112,6 +140,39 @@ router.put('/profile', sessionAuthMiddleware, async (req, res) => {
     res.json({ success: true, user: updatedUser });
   } catch (error) {
     console.error('❌ Update profile error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Get all users (for circles/contacts)
+router.get('/all', async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      where: {
+        isActive: true,
+        onboardingCompleted: true
+      },
+      select: {
+        id: true,
+        username: true,
+        profilePictureUrl: true,
+        isVerified: true,
+        lastActiveAt: true,
+        name: true,
+        zodiacSign: true,
+        essenceKeywords: true,
+        communicationTone: true,
+        motivationForConnection: true,
+        createdAt: true
+      },
+      orderBy: {
+        lastActiveAt: 'desc'
+      }
+    });
+
+    res.json({ success: true, users });
+  } catch (error) {
+    console.error('❌ Get all users error:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });

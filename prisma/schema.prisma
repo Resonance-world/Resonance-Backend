@@ -53,6 +53,15 @@ model User {
   // Generated data
   personalitySummary       String? // LLM-generated essence summary
 
+  // Social links
+  telegramHandle          String?
+  instagramHandle         String?
+  baseFarcasterHandle     String?
+  zoraHandle              String?
+  linkedinHandle          String?
+  xHandle                 String?
+  websiteUrl              String?
+
   // Annoy index integration
   annoyIndexPosition       Int?      @unique // Position in Annoy index (set when indexed)
   essenceEmbeddingUpdatedAt DateTime? // Track when embedding was last generated
