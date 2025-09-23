@@ -7,15 +7,15 @@ import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 
 // Import routes
-import authRoutes from './routes/auth.js';
-import userRoutes from './routes/user.js';
-import messageRoutes from './routes/message.js';
-import chatbotRoutes from './routes/chatbot.js';
-import onboardingRoutes from './routes/onboarding.js';
+import authRoutes from './routes/auth.ts';
+import userRoutes from './routes/user.ts';
+import messageRoutes from './routes/message.ts';
+import chatbotRoutes from './routes/chatbot.ts';
+import onboardingRoutes from './routes/onboarding.ts';
 
 // Import middleware
-import { errorHandler } from './middleware/errorHandler.js';
-import { logger } from './middleware/logger.js';
+import { errorHandler } from './middleware/errorHandler.ts';
+import { logger } from './middleware/logger.ts';
 
 // Load environment variables
 dotenv.config();
@@ -80,8 +80,8 @@ io.on('connection', (socket) => {
   });
 
   // Handle private messages
-  socket.on('private_message', (data) => {
-    socket.to(data.receiverId).emit('new_message', data);
+  socket.on('wsMessage', (data) => {
+    socket.to(data.receiverId).emit('newMessage', data);
   });
 
   // Handle group messages

@@ -71,6 +71,10 @@ model User {
   receivedMessages  Message[] @relation("MessageReceiver")
   conversations     ConversationParticipant[]
 
+  // Relationships
+  relatingRelations Relationship[] @relation("relatingUser")
+  relatedRelations  Relationship[] @relation("relatedUser")
+
   // Chatbot interactions
   chatbotSessions   ChatbotSession[]
 
@@ -163,4 +167,25 @@ enum BotType {
   WELLNESS
   FINANCIAL
   GENERAL
+}
+
+enum RELATION_LEVEL {
+  PUBLIC
+  COLLAB
+  PRIVATE
+}
+
+model Relationship {
+  id            String         @id @default(cuid())
+  relationLevel RELATION_LEVEL
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  relatingUserId String
+  relatedUserId  String
+  relatedUser    User   @relation("relatedUser", fields: [relatedUserId], references: [id])
+  relatingUser   User   @relation("relatingUser", fields: [relatingUserId], references: [id])
+
+  @@unique([relatingUserId, relatedUserId])
+  @@map("relationships")
 } 
