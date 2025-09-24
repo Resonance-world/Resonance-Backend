@@ -20,19 +20,17 @@ export class WriteMessageService {
     //   throw new Error('There is no relationship with this user');
     // }
 
-    //const savedMessage = await this.messagesProvider.writeMessage(senderId, content, receiverId);
-    await this.messagesProvider.writeMessage(senderId, content, receiverId);
+    const savedMessage = await this.messagesProvider.writeMessage(senderId, content, receiverId);
 
-    // Send message to specific receiver via WebSocket
-    const sent = this.socketService.sendMessageToUser(receiverId, content);
+    // Send full message object to specific receiver via WebSocket
+    const sent = this.socketService.sendMessageToUser(receiverId, savedMessage);
 
     if (sent) {
-      console.log(`Message sent to user ${receiverId} via WebSocket`);
+      console.log(`✅ Message delivered to user ${receiverId} via WebSocket`);
     } else {
-      console.log(
-        `User ${receiverId} not connected, message saved but not sent via WebSocket`,
-      );
+      console.log(`📝 Message saved to database for user ${receiverId} (will be visible when they open the conversation)`);
     }
-//    return savedMessage;
+    
+    return savedMessage;
   }
 }

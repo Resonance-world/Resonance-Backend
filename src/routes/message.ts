@@ -8,6 +8,7 @@ import {RelationshipsService} from "@/relationships/services/check-relationships
 import {GetRelationshipProvider} from "@/relationships/providers/get-relationship.provider";
 import {WriteMessageService} from "@/messages/services/write-message.service";
 import {SocketService} from "@/messages/services/socket.service";
+import {socketService} from "@/messages/services/socket-service-singleton";
 import {sessionAuthMiddleware} from "@/middleware/sessionAuth";
 
 const router: Router = Router();
@@ -19,7 +20,8 @@ const sharedUserProvider = new SharedUserProvider();
 const messagesProvider = new MessagesProvider();
 const relationshipsService = new RelationshipsService(getRelationshipProvider, sharedUserProvider);
 const getMessagesService = new GetMessagesService(messagesProvider, relationshipsService);
-const socketService = new SocketService();
+// Use the singleton socketService instance
+console.log('✅ socketService singleton loaded successfully:', !!socketService);
 const writeMessageService = new WriteMessageService(messagesProvider, relationshipsService, socketService);
 
 const getMyConversationsService = new GetMyConversationsService(

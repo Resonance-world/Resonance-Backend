@@ -6,16 +6,19 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 
+// Import WebSocket service singleton
+import { socketService } from './messages/services/socket-service-singleton.js';
+
 // Import routes
-import authRoutes from './routes/auth.ts';
-import userRoutes from './routes/user.ts';
-import messageRoutes from './routes/message.ts';
-import chatbotRoutes from './routes/chatbot.ts';
-import onboardingRoutes from './routes/onboarding.ts';
+import authRoutes from './routes/auth.js';
+import userRoutes from './routes/user.js';
+import messageRoutes from './routes/message.js';
+import chatbotRoutes from './routes/chatbot.js';
+import onboardingRoutes from './routes/onboarding.js';
 
 // Import middleware
-import { errorHandler } from './middleware/errorHandler.ts';
-import { logger } from './middleware/logger.ts';
+import { errorHandler } from './middleware/errorHandler.js';
+import { logger } from './middleware/logger.js';
 
 // Load environment variables
 dotenv.config();
@@ -27,9 +30,50 @@ const port = process.env.PORT || 5050;
 // Socket.IO setup
 const io = new Server(server, {
   cors: {
-    origin: process.env.SOCKET_CORS_ORIGIN || "http://localhost:3000",
-    methods: ["GET", "POST"]
+    origin: "*",
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  allowEIO3: true
+});
+
+// Set the socket.io instance on the existing socketService
+socketService.socket = io;
+
+// Handle Socket.IO connections manually since we're not using NestJS framework
+io.on('connection', (socket) => {
+  console.log('🔌 User connected:', socket.id);
+  console.log('🔌 Handshake query:', socket.handshake.query);
+  console.log('🔌 Current connected users:', Array.from(socketService.userSockets.keys()));
+  
+  // Extract userId from query params
+  const userId = socket.handshake.query.userId as string;
+  if (userId) {
+    socketService.insertUserSockets(userId, socket.id);
+    console.log(`🔌 User ${userId} mapped to socket ${socket.id}`);
+    console.log('🔌 Updated connected users:', Array.from(socketService.userSockets.keys()));
+  } else {
+    console.log('🔌 No userId provided in connection query');
   }
+
+  socket.on('disconnect', () => {
+    console.log(`🔌 Client disconnected: ${socket.id}`);
+    
+    // Clean up user socket mapping
+    for (const [userId, socketId] of socketService.userSockets.entries()) {
+      if (socketId === socket.id) {
+        socketService.removeUserSocket(userId);
+        console.log(`🔌 Removed socket mapping for user ${userId}`);
+        break;
+      }
+    }
+  });
+
+  // Handle wsMessage events
+  socket.on('wsMessage', (payload) => {
+    console.log('🔌 Received wsMessage:', payload);
+    socket.emit('reply', 'réponse ok!');
+  });
 });
 
 // Trust proxy for proper IP detection (required for rate limiting)
@@ -69,39 +113,8 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 
-// Socket.IO connection handling
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-
-  // Join room for private messaging
-  socket.on('join_room', (userId: string) => {
-    socket.join(userId);
-    console.log(`User ${userId} joined room ${userId}`);
-  });
-
-  // Handle private messages
-  socket.on('wsMessage', (data) => {
-    socket.to(data.receiverId).emit('newMessage', data);
-  });
-
-  // Handle group messages
-  socket.on('group_message', (data) => {
-    socket.to(data.conversationId).emit('new_message', data);
-  });
-
-  // Handle typing indicators
-  socket.on('typing', (data) => {
-    socket.to(data.roomId).emit('user_typing', data);
-  });
-
-  socket.on('stop_typing', (data) => {
-    socket.to(data.roomId).emit('user_stop_typing', data);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
-});
+// Socket.IO connection handling - Using MessagesGateway instead
+// The MessagesGateway handles all WebSocket connections and events
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

@@ -27,9 +27,7 @@ export class MessagesGateway
   handleConnection(client: Socket) {
     console.log(`Client connected: ${client.id}`);
 
-    console.debug(client.handshake.query, 'hndshake');
-    console.debug(typeof client.handshake.query);
-    // Extract userId from query params or auth token
+    // Extract userId from query params
     const userId = client.handshake.query.userId as string;
     if (userId) {
       this.socketService.insertUserSockets(userId, client.id);
@@ -39,11 +37,12 @@ export class MessagesGateway
 
   handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
-
-    // User Id is the id of the client supposed to receive the sh on the frontend
-    for (const [userId, socketId] of this.userSockets.entries()) {
+    
+    // Clean up user socket mapping
+    for (const [userId, socketId] of this.socketService.userSockets.entries()) {
       if (socketId === client.id) {
-        this.userSockets.delete(userId);
+        this.socketService.removeUserSocket(userId);
+        console.log(`Removed socket mapping for user ${userId}`);
         break;
       }
     }
