@@ -31,7 +31,7 @@ const getMyConversationsService = new GetMyConversationsService(
 // Get conversations
 router.get('/conversations/:id', sessionAuthMiddleware, async (req, res) => {
   try {
-    const conversations = await getMyConversationsService.getMyConversations(req.userId);// TODO req.userId for the logged user but put the ID from the server side if the middleware give it to us
+    const conversations = await getMyConversationsService.getMyConversations((req as any).userId);// TODO req.userId for the logged user but put the ID from the server side if the middleware give it to us
     res.json(conversations);
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
@@ -41,10 +41,13 @@ router.get('/conversations/:id', sessionAuthMiddleware, async (req, res) => {
 // Get conversation messages
 router.get('/get-conv-messages/:id', sessionAuthMiddleware, async (req, res) => {
   try {
+    console.log('🔍 Backend: GET /api/messages/get-conv-messages/:id - Request received');
     const receiverId = req.params.id;
-    console.log('🔍 Backend: Getting messages for userId:', req.userId, 'receiverId:', receiverId);
-    const messages = await getMessagesService.getMessagesByConversation(req.userId, receiverId);
+    const currentUserId = req.query.userId as string;
+    console.log('🔍 Backend: Getting messages for userId:', currentUserId, 'receiverId:', receiverId);
+    const messages = await getMessagesService.getMessagesByConversation(currentUserId, receiverId);
     console.log('🔍 Backend: Messages result:', messages);
+    console.log('🔍 Backend: Number of messages found:', messages?.length || 0);
     res.json(messages);
   } catch (error) {
     console.error('🔍 Backend: Error getting messages:', error);
@@ -56,9 +59,9 @@ router.get('/get-conv-messages/:id', sessionAuthMiddleware, async (req, res) => 
 router.post('/send', sessionAuthMiddleware, async (req, res) => {
   try {
     const { receiverId, content, userId } = req.body;
-    console.log('Received message:', { receiverId, content, userId, authenticatedUserId: req.userId });
+    console.log('Received message:', { receiverId, content, userId, authenticatedUserId: (req as any).userId });
     
-    const message = await writeMessageService.writeMessage(userId || req.userId, receiverId, content);
+    const message = await writeMessageService.writeMessage(userId || (req as any).userId, receiverId, content);
     res.json({ success: true, message: "Message sent successfully", data: message });
   } catch (error) {
     console.error('Error sending message:', error);

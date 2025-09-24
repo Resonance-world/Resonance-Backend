@@ -9,8 +9,12 @@ export class MessagesProvider {
         OR: [
           {
             senderId: senderId,
+            receiverId: receiverId,
           },
-          { receiverId: receiverId },
+          {
+            senderId: receiverId,
+            receiverId: senderId,
+          },
         ],
       },
       include: {

@@ -57,14 +57,23 @@ router.get('/status/:userId', async (req, res) => {
 // Save onboarding data
 router.post('/save', async (req, res) => {
   try {
+    console.log('📥 Received onboarding save request');
+    console.log('📥 Request body:', req.body);
+    console.log('📥 Request headers:', req.headers);
+    
     const { userId, onboardingData, personalitySummary } = req.body;
 
     if (!userId) {
+      console.log('❌ No userId provided in request');
       return res.status(400).json({
         success: false,
         error: 'User ID is required'
       });
     }
+
+    console.log('✅ User ID found:', userId);
+    console.log('📊 Onboarding data received:', onboardingData);
+    console.log('📝 Personality summary received:', personalitySummary);
 
     const {
       date_of_birth,
@@ -125,18 +134,33 @@ router.post('/save', async (req, res) => {
     });
 
     console.log('✅ Onboarding data saved for user:', userId);
+    console.log('✅ Updated user data:', {
+      id: updatedUser.id,
+      onboardingCompleted: updatedUser.onboardingCompleted,
+      name: updatedUser.name,
+      dateOfBirth: updatedUser.dateOfBirth,
+      zodiacSign: updatedUser.zodiacSign
+    });
 
-    res.json({
+    const response = {
       success: true,
       message: 'Onboarding completed successfully',
       user: {
         id: updatedUser.id,
         onboardingCompleted: updatedUser.onboardingCompleted
       }
-    });
+    };
+
+    console.log('📤 Sending response:', response);
+    res.json(response);
 
   } catch (error) {
     console.error('❌ Error saving onboarding data:', error);
+    console.error('❌ Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace'
+    });
     res.status(500).json({
       success: false,
       error: 'Failed to save onboarding data'
