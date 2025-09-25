@@ -69,7 +69,6 @@ model User {
   // Messaging
   sentMessages      Message[] @relation("MessageSender")
   receivedMessages  Message[] @relation("MessageReceiver")
-  conversations     ConversationParticipant[]
 
   // Relationships
   relatingRelations Relationship[] @relation("relatingUser")
@@ -81,40 +80,12 @@ model User {
   @@map("users")
 }
 
-model Conversation {
-  id           String   @id @default(cuid())
-  name         String?
-  isGroup      Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  participants ConversationParticipant[]
-  messages     Message[]
-
-  @@map("conversations")
-}
-
-model ConversationParticipant {
-  id             String   @id @default(cuid())
-  userId         String
-  conversationId String
-  joinedAt       DateTime @default(now())
-  isAdmin        Boolean  @default(false)
-
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, conversationId])
-  @@map("conversation_participants")
-}
-
 model Message {
   id             String    @id @default(cuid())
   content        String
   messageType    MessageType @default(TEXT)
   senderId       String
   receiverId     String?   // For direct messages
-  conversationId String?   // For group conversations
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   isRead         Boolean   @default(false)
@@ -122,7 +93,6 @@ model Message {
 
   sender       User          @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
   receiver     User?         @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@map("messages")
 }
