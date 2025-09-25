@@ -56,6 +56,11 @@ model User {
   sentMessages              Message[]        @relation("MessageSender")
   relatedRelations          Relationship[]   @relation("relatedUser")
   relatingRelations         Relationship[]   @relation("relatingUser")
+  deployedPrompts           DeployedPrompt[]
+  matchingSessions          MatchingSession[]
+  matchResults              MatchResult[]
+  userMatchHistory          UserMatchHistory[] @relation("UserMatchHistory")
+  matchedUserHistory        UserMatchHistory[] @relation("MatchedUserHistory")
 
   @@map("users")
 }
@@ -130,8 +135,112 @@ enum BotType {
   GENERAL
 }
 
+model Theme {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  prompts     Prompt[]
+  deployedPrompts DeployedPrompt[]
+
+  @@map("themes")
+}
+
+model Prompt {
+  id          String   @id @default(cuid())
+  themeId     String
+  question    String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  theme       Theme    @relation(fields: [themeId], references: [id], onDelete: Cascade)
+  deployedPrompts DeployedPrompt[]
+
+  @@map("prompts")
+}
+
+model DeployedPrompt {
+  id                String            @id @default(cuid())
+  userId            String
+  promptId          String?
+  customPrompt      String?
+  themeId           String
+  themeName         String
+  question          String
+  deployedAt        DateTime          @default(now())
+  expiresAt         DateTime
+  status            DeployedPromptStatus @default(ACTIVE)
+  matchesShown      Boolean           @default(false)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prompt            Prompt?           @relation(fields: [promptId], references: [id], onDelete: SetNull)
+  theme             Theme             @relation(fields: [themeId], references: [id], onDelete: Cascade)
+  matchingSessions  MatchingSession[]
+
+  @@map("deployed_prompts")
+}
+
+
 enum RELATION_LEVEL {
   PUBLIC
   COLLAB
   PRIVATE
 }
+
+enum DeployedPromptStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model MatchingSession {
+  id          String   @id @default(cuid())
+  userId      String
+  promptId    String
+  status      String   @default("ACTIVE") // ACTIVE, COMPLETED, EXPIRED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prompt      DeployedPrompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  matchResults MatchResult[]
+
+  @@map("matching_sessions")
+}
+
+model MatchResult {
+  id                String   @id @default(cuid())
+  sessionId         String
+  matchedUserId     String
+  compatibilityScore Float
+  themeMatch        Boolean
+  questionMatch     Boolean
+  personalityMatch  Boolean
+  locationMatch     Boolean
+  createdAt         DateTime @default(now())
+
+  session           MatchingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  matchedUser       User @relation(fields: [matchedUserId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, matchedUserId])
+  @@map("match_results")
+}
+
+model UserMatchHistory {
+  id            String   @id @default(cuid())
+  userId        String
+  matchedUserId String
+  matchType     String   // "ACCEPTED", "DECLINED", "EXPIRED"
+  sessionId     String?
+  createdAt     DateTime @default(now())
+
+  user          User     @relation("UserMatchHistory", fields: [userId], references: [id], onDelete: Cascade)
+  matchedUser   User     @relation("MatchedUserHistory", fields: [matchedUserId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, matchedUserId])
+  @@map("user_match_history")
+}
+

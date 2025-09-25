@@ -15,6 +15,9 @@ import userRoutes from './routes/user.js';
 import messageRoutes from './routes/message.js';
 import chatbotRoutes from './routes/chatbot.js';
 import onboardingRoutes from './routes/onboarding.js';
+import themesRoutes from './routes/themes.js';
+import deployedPromptsRoutes from './routes/deployedPrompts.js';
+import matchesRoutes from './routes/matches.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -112,6 +115,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/themes', themesRoutes);
+app.use('/api/deployed-prompts', deployedPromptsRoutes);
+app.use('/api/matches', matchesRoutes);
 
 // Socket.IO connection handling - Using MessagesGateway instead
 // The MessagesGateway handles all WebSocket connections and events
