@@ -244,3 +244,4 @@ model UserMatchHistory {
   @@map("user_match_history")
 }
 
+
