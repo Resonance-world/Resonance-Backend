@@ -71,4 +71,57 @@ router.post('/send', sessionAuthMiddleware, async (req, res) => {
   }
 });
 
+// Get unread messages count by sender
+router.get('/unread/:userId', sessionAuthMiddleware, async (req, res) => {
+  try {
+    const currentUserId = req.params.userId;
+    const { userIds } = req.query; // Array of user IDs to check unread messages for
+    
+    console.log('🔍 Getting unread messages for user:', currentUserId);
+    console.log('🔍 Checking unread messages for users:', userIds);
+    
+    if (!userIds || !Array.isArray(userIds)) {
+      return res.status(400).json({ error: 'userIds query parameter is required and must be an array' });
+    }
+    
+    // Check if each user has unread messages (based on last message)
+    const unreadMessages = await Promise.all(
+      userIds.map(async (userId: string) => {
+        const hasUnread = await messagesProvider.hasUnreadMessagesFromUser(currentUserId, userId);
+        return {
+          senderId: userId,
+          hasUnread: hasUnread,
+        };
+      })
+    );
+    
+    // Filter out users with no unread messages
+    const usersWithUnreadMessages = unreadMessages.filter(msg => msg.hasUnread);
+    
+    console.log('🔍 Unread messages result:', usersWithUnreadMessages);
+    
+    res.json({ unreadMessages: usersWithUnreadMessages });
+  } catch (error) {
+    console.error('🔍 Error getting unread messages:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Mark messages as read
+router.post('/mark-read', async (req, res) => {
+  try {
+    const { currentUserId, senderId } = req.body;
+    console.log('📖 Marking messages as read from:', senderId, 'to:', currentUserId);
+    console.log('📖 Request body:', req.body);
+    
+    const result = await messagesProvider.markMessagesAsRead(currentUserId, senderId);
+    console.log('✅ Messages marked as read successfully. Updated count:', result.count);
+    
+    res.json({ success: true, message: 'Messages marked as read', updatedCount: result.count });
+  } catch (error) {
+    console.error('❌ Error marking messages as read:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router; 
