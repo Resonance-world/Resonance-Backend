@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { calculateZodiacSign } from '../utils/zodiac';
 
-const router = Router();
+const router: Router = Router();
 const prisma = new PrismaClient();
 
 // Get onboarding status for a user
@@ -106,6 +106,19 @@ router.post('/save', async (req, res) => {
     if (date_of_birth) {
       dateOfBirth = new Date(date_of_birth);
       zodiacSign = calculateZodiacSign(dateOfBirth);
+    }
+
+    // Check if user exists first
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!existingUser) {
+      console.log('❌ User not found:', userId);
+      return res.status(404).json({
+        success: false,
+        error: 'User not found. Please ensure you are properly authenticated.'
+      });
     }
 
     // Update user with onboarding data
