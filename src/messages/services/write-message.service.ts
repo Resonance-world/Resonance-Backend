@@ -12,13 +12,13 @@ export class WriteMessageService {
   async writeMessage(senderId: string, receiverId: string, content: string) {
     console.log(`Writing message from ${senderId} to ${receiverId}: ${content}`);
     
-    // TODO: Re-enable relationship check once relationships are properly set up
-    // const isRelationshipExists =
-    //   await this.relationshipsService.checkRelationship(senderId, receiverId);
+    //TODO: Re-enable relationship check once relationships are properly set up
+    const isRelationshipExists =
+      await this.relationshipsService.checkRelationship(senderId, receiverId);
 
-    // if (!isRelationshipExists) {
-    //   throw new Error('There is no relationship with this user');
-    // }
+    if (!isRelationshipExists) {
+      throw new Error('There is no relationship with this user');
+    }
 
     const savedMessage = await this.messagesProvider.writeMessage(senderId, content, receiverId);
 
