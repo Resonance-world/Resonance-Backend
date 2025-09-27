@@ -6,8 +6,9 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 
-// Import WebSocket service singleton
+// Import WebSocket service singletons
 import { socketService } from './messages/services/socket-service-singleton.js';
+import { matchSocketService } from './matching/services/match-socket-service-singleton.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -41,8 +42,9 @@ const io = new Server(server, {
   allowEIO3: true
 });
 
-// Set the socket.io instance on the existing socketService
+// Set the socket.io instance on both socket services
 socketService.socket = io;
+matchSocketService.socket = io;
 
 // Handle Socket.IO connections manually since we're not using NestJS framework
 io.on('connection', (socket) => {
@@ -53,7 +55,9 @@ io.on('connection', (socket) => {
   // Extract userId from query params
   const userId = socket.handshake.query.userId as string;
   if (userId) {
+    // Register user in both socket services
     socketService.insertUserSockets(userId, socket.id);
+    matchSocketService.insertUserSockets(userId, socket.id);
     console.log(`🔌 User ${userId} mapped to socket ${socket.id}`);
     console.log('🔌 Updated connected users:', Array.from(socketService.userSockets.keys()));
   } else {
@@ -63,10 +67,11 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log(`🔌 Client disconnected: ${socket.id}`);
     
-    // Clean up user socket mapping
+    // Clean up user socket mapping from both services
     for (const [userId, socketId] of socketService.userSockets.entries()) {
       if (socketId === socket.id) {
         socketService.removeUserSocket(userId);
+        matchSocketService.removeUserSocket(userId);
         console.log(`🔌 Removed socket mapping for user ${userId}`);
         break;
       }

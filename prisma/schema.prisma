@@ -8,37 +8,37 @@ datasource db {
 }
 
 model User {
-  id                        String           @id @default(cuid())
-  walletAddress             String           @unique
-  username                  String?          @unique
+  id                        String             @id @default(cuid())
+  walletAddress             String             @unique
+  username                  String?            @unique
   profilePictureUrl         String?
-  createdAt                 DateTime         @default(now())
-  updatedAt                 DateTime         @updatedAt
-  nullifierHash             String?          @unique
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
+  nullifierHash             String?            @unique
   verificationLevel         String?
-  isVerified                Boolean          @default(false)
-  annoyIndexPosition        Int?             @unique
+  isVerified                Boolean            @default(false)
+  annoyIndexPosition        Int?               @unique
   communicationTone         String?
-  currentAvailability       String           @default("available")
+  currentAvailability       String             @default("available")
   currentCuriosity          String?
   essenceEmbeddingUpdatedAt DateTime?
   essenceKeywords           String?
   essenceStory              String?
-  isActive                  Boolean          @default(true)
-  lastActiveAt              DateTime         @default(now())
+  isActive                  Boolean            @default(true)
+  lastActiveAt              DateTime           @default(now())
   locationCity              String?
   locationCountry           String?
-  locationLat               Decimal?         @db.Decimal(10, 8)
-  locationLng               Decimal?         @db.Decimal(11, 8)
+  locationLat               Decimal?           @db.Decimal(10, 8)
+  locationLng               Decimal?           @db.Decimal(11, 8)
   motivationForConnection   String?
   name                      String?
-  onboardingCompleted       Boolean          @default(false)
+  onboardingCompleted       Boolean            @default(false)
   onboardingCompletedAt     DateTime?
   personalitySummary        String?
   sex                       String?
-  successfulConnections     Int              @default(0)
+  successfulConnections     Int                @default(0)
   surroundingDetail         String?
-  totalMatchesMade          Int              @default(0)
+  totalMatchesMade          Int                @default(0)
   dateOfBirth               DateTime?
   zodiacSign                String?
   baseFarcasterHandle       String?
@@ -52,15 +52,15 @@ model User {
   privateProfilePictureUrl  String?
   userWhy                   String?
   chatbotSessions           ChatbotSession[]
-  receivedMessages          Message[]        @relation("MessageReceiver")
-  sentMessages              Message[]        @relation("MessageSender")
-  relatedRelations          Relationship[]   @relation("relatedUser")
-  relatingRelations         Relationship[]   @relation("relatingUser")
   deployedPrompts           DeployedPrompt[]
-  matchingSessions          MatchingSession[]
   matchResults              MatchResult[]
-  userMatchHistory          UserMatchHistory[] @relation("UserMatchHistory")
+  matchingSessions          MatchingSession[]
+  receivedMessages          Message[]          @relation("MessageReceiver")
+  sentMessages              Message[]          @relation("MessageSender")
+  relatedRelations          Relationship[]     @relation("relatedUser")
+  relatingRelations         Relationship[]     @relation("relatingUser")
   matchedUserHistory        UserMatchHistory[] @relation("MatchedUserHistory")
+  userMatchHistory          UserMatchHistory[] @relation("UserMatchHistory")
 
   @@map("users")
 }
@@ -120,6 +120,103 @@ model Relationship {
   @@map("relationships")
 }
 
+model Theme {
+  id              String           @id @default(cuid())
+  name            String           @unique
+  description     String?
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deployedPrompts DeployedPrompt[]
+  prompts         Prompt[]
+
+  @@map("themes")
+}
+
+model Prompt {
+  id              String           @id @default(cuid())
+  themeId         String
+  question        String
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deployedPrompts DeployedPrompt[]
+  theme           Theme            @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@map("prompts")
+}
+
+model DeployedPrompt {
+  id               String               @id @default(cuid())
+  userId           String
+  promptId         String?
+  customPrompt     String?
+  themeId          String
+  themeName        String
+  question         String
+  deployedAt       DateTime             @default(now())
+  expiresAt        DateTime
+  status           DeployedPromptStatus @default(ACTIVE)
+  matchesShown     Boolean              @default(false)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  prompt           Prompt?              @relation(fields: [promptId], references: [id])
+  theme            Theme                @relation(fields: [themeId], references: [id], onDelete: Cascade)
+  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  matchingSessions MatchingSession[]
+
+  @@map("deployed_prompts")
+}
+
+model MatchingSession {
+  id           String         @id @default(cuid())
+  userId       String
+  promptId     String
+  status       String         @default("ACTIVE")
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  matchResults MatchResult[]
+  prompt       DeployedPrompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("matching_sessions")
+}
+
+model MatchResult {
+  id                 String          @id @default(cuid())
+  sessionId          String
+  matchedUserId      String
+  compatibilityScore Float
+  themeMatch         Boolean
+  questionMatch      Boolean
+  personalityMatch   Boolean
+  locationMatch      Boolean
+  createdAt          DateTime        @default(now())
+  confirmed_at       DateTime?
+  status             MatchStatus     @default(PENDING)
+  user1_accepted     Boolean         @default(false)
+  user2_accepted     Boolean         @default(false)
+  matchedUser        User            @relation(fields: [matchedUserId], references: [id], onDelete: Cascade)
+  session            MatchingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, matchedUserId])
+  @@map("match_results")
+}
+
+model UserMatchHistory {
+  id            String   @id @default(cuid())
+  userId        String
+  matchedUserId String
+  matchType     String
+  sessionId     String?
+  createdAt     DateTime @default(now())
+  matchedUser   User     @relation("MatchedUserHistory", fields: [matchedUserId], references: [id], onDelete: Cascade)
+  user          User     @relation("UserMatchHistory", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, matchedUserId])
+  @@map("user_match_history")
+}
+
 enum MessageType {
   TEXT
   IMAGE
@@ -135,55 +232,6 @@ enum BotType {
   GENERAL
 }
 
-model Theme {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  prompts     Prompt[]
-  deployedPrompts DeployedPrompt[]
-
-  @@map("themes")
-}
-
-model Prompt {
-  id          String   @id @default(cuid())
-  themeId     String
-  question    String
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  theme       Theme    @relation(fields: [themeId], references: [id], onDelete: Cascade)
-  deployedPrompts DeployedPrompt[]
-
-  @@map("prompts")
-}
-
-model DeployedPrompt {
-  id                String            @id @default(cuid())
-  userId            String
-  promptId          String?
-  customPrompt      String?
-  themeId           String
-  themeName         String
-  question          String
-  deployedAt        DateTime          @default(now())
-  expiresAt         DateTime
-  status            DeployedPromptStatus @default(ACTIVE)
-  matchesShown      Boolean           @default(false)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  prompt            Prompt?           @relation(fields: [promptId], references: [id], onDelete: SetNull)
-  theme             Theme             @relation(fields: [themeId], references: [id], onDelete: Cascade)
-  matchingSessions  MatchingSession[]
-
-  @@map("deployed_prompts")
-}
-
-
 enum RELATION_LEVEL {
   PUBLIC
   COLLAB
@@ -196,52 +244,9 @@ enum DeployedPromptStatus {
   CANCELLED
 }
 
-model MatchingSession {
-  id          String   @id @default(cuid())
-  userId      String
-  promptId    String
-  status      String   @default("ACTIVE") // ACTIVE, COMPLETED, EXPIRED
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  prompt      DeployedPrompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
-  matchResults MatchResult[]
-
-  @@map("matching_sessions")
+enum MatchStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+  EXPIRED
 }
-
-model MatchResult {
-  id                String   @id @default(cuid())
-  sessionId         String
-  matchedUserId     String
-  compatibilityScore Float
-  themeMatch        Boolean
-  questionMatch     Boolean
-  personalityMatch  Boolean
-  locationMatch     Boolean
-  createdAt         DateTime @default(now())
-
-  session           MatchingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  matchedUser       User @relation(fields: [matchedUserId], references: [id], onDelete: Cascade)
-
-  @@unique([sessionId, matchedUserId])
-  @@map("match_results")
-}
-
-model UserMatchHistory {
-  id            String   @id @default(cuid())
-  userId        String
-  matchedUserId String
-  matchType     String   // "ACCEPTED", "DECLINED", "EXPIRED"
-  sessionId     String?
-  createdAt     DateTime @default(now())
-
-  user          User     @relation("UserMatchHistory", fields: [userId], references: [id], onDelete: Cascade)
-  matchedUser   User     @relation("MatchedUserHistory", fields: [matchedUserId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, matchedUserId])
-  @@map("user_match_history")
-}
-
-
