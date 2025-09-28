@@ -31,6 +31,101 @@ router.get('/', sessionAuthMiddleware, async (req: AuthenticatedRequest, res: Re
   }
 });
 
+// Get matched users (users who both have accepted the match)
+router.get('/matched-users', sessionAuthMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    console.log('🔍 Getting matched users for user:', userId);
+
+    // Get confirmed matches (both users have accepted)
+    const confirmedMatches = await prisma.matchResult.findMany({
+      where: {
+        OR: [
+          { session: { userId: userId } },
+          { matchedUserId: userId }
+        ],
+        status: 'CONFIRMED'
+      },
+      include: {
+        session: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                name: true,
+                profilePictureUrl: true,
+                privateProfilePictureUrl: true,
+                isVerified: true,
+                lastActiveAt: true,
+                essenceKeywords: true,
+                communicationTone: true,
+                motivationForConnection: true,
+                createdAt: true
+              }
+            }
+          }
+        },
+        matchedUser: {
+          select: {
+            id: true,
+            username: true,
+            name: true,
+            profilePictureUrl: true,
+            privateProfilePictureUrl: true,
+            isVerified: true,
+            lastActiveAt: true,
+            essenceKeywords: true,
+            communicationTone: true,
+            motivationForConnection: true,
+            createdAt: true
+          }
+        }
+      }
+    });
+
+    // Extract unique users from confirmed matches
+    const matchedUsers = new Map();
+    
+    confirmedMatches.forEach(match => {
+      // Add the other user (not the current user) to the matched users
+      const otherUser = match.session.userId === userId ? match.matchedUser : match.session.user;
+      if (otherUser && !matchedUsers.has(otherUser.id)) {
+        matchedUsers.set(otherUser.id, {
+          id: otherUser.id,
+          username: otherUser.username,
+          name: otherUser.name,
+          profilePictureUrl: otherUser.profilePictureUrl,
+          privateProfilePictureUrl: otherUser.privateProfilePictureUrl,
+          isVerified: otherUser.isVerified,
+          lastActiveAt: otherUser.lastActiveAt,
+          essenceKeywords: otherUser.essenceKeywords,
+          communicationTone: otherUser.communicationTone,
+          motivationForConnection: otherUser.motivationForConnection,
+          createdAt: otherUser.createdAt
+        });
+      }
+    });
+
+    const users = Array.from(matchedUsers.values());
+    
+    console.log('✅ Found matched users:', users.length);
+    
+    res.json({
+      success: true,
+      users: users
+    });
+  } catch (error) {
+    console.error('❌ Error fetching matched users:', error);
+    res.status(500).json({ error: 'Failed to fetch matched users' });
+  }
+});
+
 // Helper function to calculate compatibility score
 function calculateCompatibilityScore(userPrompt: any, matchPrompt: any): number {
   let score = 0;
