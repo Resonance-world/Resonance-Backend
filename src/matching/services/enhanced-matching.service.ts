@@ -1,7 +1,6 @@
-import { PrismaClient, MatchStatus, RELATION_LEVEL } from '@prisma/client';
+import { MatchStatus, RELATION_LEVEL } from '@prisma/client';
 import { matchSocketService } from './match-socket-service-singleton';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../lib/prisma.js';
 
 export interface MatchAcceptanceResult {
   success: boolean;

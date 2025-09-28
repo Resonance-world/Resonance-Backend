@@ -1,9 +1,8 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { sessionAuthMiddleware } from '../middleware/sessionAuth';
+import { prisma } from '../lib/prisma.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Get user's deployed prompts
 router.get('/', sessionAuthMiddleware, async (req, res) => {

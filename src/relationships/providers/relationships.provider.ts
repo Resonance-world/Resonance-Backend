@@ -1,6 +1,5 @@
-import { PrismaClient, RELATION_LEVEL } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { RELATION_LEVEL } from '@prisma/client';
+import { prisma } from '../../lib/prisma.js';
 
 export class RelationshipsProvider {
   /**

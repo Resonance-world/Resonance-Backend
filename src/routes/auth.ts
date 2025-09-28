@@ -1,9 +1,8 @@
 import { Router, type Router as ExpressRouter } from 'express';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
 
 const router: ExpressRouter = Router();
-const prisma = new PrismaClient();
 
 // World ID verification endpoint
 router.post('/verify', async (req, res) => {

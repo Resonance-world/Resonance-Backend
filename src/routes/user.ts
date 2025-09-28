@@ -1,11 +1,10 @@
 import { Router, type Router as ExpressRouter } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth.js';
 import { sessionAuthMiddleware } from '../middleware/sessionAuth.js';
 import { calculateAgeFromString } from '../utils/age.js';
+import { prisma } from '../lib/prisma.js';
 
 const router: ExpressRouter = Router();
-const prisma = new PrismaClient();
 
 // Get user profile (for authenticated users)
 router.get('/profile', sessionAuthMiddleware, async (req, res) => {
@@ -248,6 +247,7 @@ router.get('/:userId', async (req, res) => {
         walletAddress: true,
         username: true,
         profilePictureUrl: true,
+        privateProfilePictureUrl: true,
         isVerified: true,
         verificationLevel: true,
         onboardingCompleted: true,
@@ -259,6 +259,13 @@ router.get('/:userId', async (req, res) => {
         communicationTone: true,
         motivationForConnection: true,
         personalitySummary: true,
+        telegramHandle: true,
+        instagramHandle: true,
+        baseFarcasterHandle: true,
+        zoraHandle: true,
+        linkedinHandle: true,
+        xHandle: true,
+        websiteUrl: true,
         createdAt: true
       }
     });

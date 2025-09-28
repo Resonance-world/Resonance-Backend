@@ -1,9 +1,8 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { sessionAuthMiddleware } from '../middleware/sessionAuth.js';
 import { calculateAgeFromString } from '../utils/age.js';
+import { prisma } from '../lib/prisma.js';
 const router = Router();
-const prisma = new PrismaClient();
 // Get user profile (for authenticated users)
 router.get('/profile', sessionAuthMiddleware, async (req, res) => {
     try {
@@ -229,6 +228,7 @@ router.get('/:userId', async (req, res) => {
                 walletAddress: true,
                 username: true,
                 profilePictureUrl: true,
+                privateProfilePictureUrl: true,
                 isVerified: true,
                 verificationLevel: true,
                 onboardingCompleted: true,
@@ -240,6 +240,13 @@ router.get('/:userId', async (req, res) => {
                 communicationTone: true,
                 motivationForConnection: true,
                 personalitySummary: true,
+                telegramHandle: true,
+                instagramHandle: true,
+                baseFarcasterHandle: true,
+                zoraHandle: true,
+                linkedinHandle: true,
+                xHandle: true,
+                websiteUrl: true,
                 createdAt: true
             }
         });

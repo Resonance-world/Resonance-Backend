@@ -1,10 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { sessionAuthMiddleware } from '../middleware/sessionAuth';
 import { EnhancedMatchingService } from '../matching/services/enhanced-matching.service';
+import { prisma } from '../lib/prisma.js';
 
 const router: Router = Router();
-const prisma = new PrismaClient();
 const enhancedMatchingService = new EnhancedMatchingService();
 
 interface AuthenticatedRequest extends Request {

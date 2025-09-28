@@ -1,9 +1,8 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { calculateZodiacSign } from '../utils/zodiac';
+import { prisma } from '../lib/prisma.js';
 
 const router: Router = Router();
-const prisma = new PrismaClient();
 
 // Get onboarding status for a user
 router.get('/status/:userId', async (req, res) => {
