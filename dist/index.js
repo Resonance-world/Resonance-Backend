@@ -5,11 +5,19 @@ import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
+// Import WebSocket service singletons
+import { socketService } from './messages/services/socket-service-singleton.js';
+import { matchSocketService } from './matching/services/match-socket-service-singleton.js';
 // Import routes
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/user.js';
 import messageRoutes from './routes/message.js';
 import chatbotRoutes from './routes/chatbot.js';
+import onboardingRoutes from './routes/onboarding.js';
+import themesRoutes from './routes/themes.js';
+import deployedPromptsRoutes from './routes/deployedPrompts.js';
+import matchesRoutes from './routes/matches.js';
+import relationshipsRoutes from './routes/relationships.js';
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
 import { logger } from './middleware/logger.js';
@@ -21,9 +29,49 @@ const port = process.env.PORT || 5050;
 // Socket.IO setup
 const io = new Server(server, {
     cors: {
-        origin: process.env.SOCKET_CORS_ORIGIN || "http://localhost:3000",
-        methods: ["GET", "POST"]
+        origin: "*",
+        methods: ["GET", "POST"],
+        credentials: true
+    },
+    allowEIO3: true
+});
+// Set the socket.io instance on both socket services
+socketService.socket = io;
+matchSocketService.socket = io;
+// Handle Socket.IO connections manually since we're not using NestJS framework
+io.on('connection', (socket) => {
+    console.log('🔌 User connected:', socket.id);
+    console.log('🔌 Handshake query:', socket.handshake.query);
+    console.log('🔌 Current connected users:', Array.from(socketService.userSockets.keys()));
+    // Extract userId from query params
+    const userId = socket.handshake.query.userId;
+    if (userId) {
+        // Register user in both socket services
+        socketService.insertUserSockets(userId, socket.id);
+        matchSocketService.insertUserSockets(userId, socket.id);
+        console.log(`🔌 User ${userId} mapped to socket ${socket.id}`);
+        console.log('🔌 Updated connected users:', Array.from(socketService.userSockets.keys()));
     }
+    else {
+        console.log('🔌 No userId provided in connection query');
+    }
+    socket.on('disconnect', () => {
+        console.log(`🔌 Client disconnected: ${socket.id}`);
+        // Clean up user socket mapping from both services
+        for (const [userId, socketId] of socketService.userSockets.entries()) {
+            if (socketId === socket.id) {
+                socketService.removeUserSocket(userId);
+                matchSocketService.removeUserSocket(userId);
+                console.log(`🔌 Removed socket mapping for user ${userId}`);
+                break;
+            }
+        }
+    });
+    // Handle wsMessage events
+    socket.on('wsMessage', (payload) => {
+        console.log('🔌 Received wsMessage:', payload);
+        socket.emit('reply', 'réponse ok!');
+    });
 });
 // Trust proxy for proper IP detection (required for rate limiting)
 app.set('trust proxy', 1);
@@ -56,33 +104,13 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/chatbot', chatbotRoutes);
-// Socket.IO connection handling
-io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
-    // Join room for private messaging
-    socket.on('join_room', (userId) => {
-        socket.join(userId);
-        console.log(`User ${userId} joined room ${userId}`);
-    });
-    // Handle private messages
-    socket.on('private_message', (data) => {
-        socket.to(data.receiverId).emit('new_message', data);
-    });
-    // Handle group messages
-    socket.on('group_message', (data) => {
-        socket.to(data.conversationId).emit('new_message', data);
-    });
-    // Handle typing indicators
-    socket.on('typing', (data) => {
-        socket.to(data.roomId).emit('user_typing', data);
-    });
-    socket.on('stop_typing', (data) => {
-        socket.to(data.roomId).emit('user_stop_typing', data);
-    });
-    socket.on('disconnect', () => {
-        console.log('User disconnected:', socket.id);
-    });
-});
+app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/themes', themesRoutes);
+app.use('/api/deployed-prompts', deployedPromptsRoutes);
+app.use('/api/matches', matchesRoutes);
+app.use('/api/relationships', relationshipsRoutes);
+// Socket.IO connection handling - Using MessagesGateway instead
+// The MessagesGateway handles all WebSocket connections and events
 // Error handling middleware (must be last)
 app.use(errorHandler);
 // 404 handler
