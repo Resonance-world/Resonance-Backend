@@ -202,10 +202,28 @@ export class EnhancedMatchingService {
               deployedAt: userPrompt.createdAt
             };
             
+            // Send WebSocket event to both users involved in the match
             matchSocketService.sendNewMatchAvailable(match.userId, { 
               userId: match.userId, 
               matchId: matchResult.id,
               matchData: matchData
+            });
+            
+            // Also send to the original user who deployed the prompt
+            matchSocketService.sendNewMatchAvailable(userId, { 
+              userId: userId, 
+              matchId: matchResult.id,
+              matchData: {
+                ...matchData,
+                user: userPrompt.user.name || userPrompt.user.username || 'Anonymous',
+                userProfile: {
+                  id: userPrompt.user.id,
+                  name: userPrompt.user.name,
+                  username: userPrompt.user.username,
+                  profilePictureUrl: userPrompt.user.profilePictureUrl,
+                  personalitySummary: userPrompt.user.personalitySummary
+                }
+              }
             });
       }
 
@@ -407,21 +425,46 @@ export class EnhancedMatchingService {
         }
       });
 
-      // Record match history
-      await prisma.userMatchHistory.createMany({
-        data: [
-          {
-            userId: match.session.userId,
-            matchedUserId: match.matchedUserId,
-            matchType: 'ACCEPTED'
-          },
-          {
-            userId: match.matchedUserId,
-            matchedUserId: match.session.userId,
-            matchType: 'ACCEPTED'
-          }
-        ]
-      });
+      // Record match history (use upsert to handle duplicates)
+      try {
+        await Promise.all([
+          prisma.userMatchHistory.upsert({
+            where: {
+              userId_matchedUserId: {
+                userId: match.session.userId,
+                matchedUserId: match.matchedUserId
+              }
+            },
+            update: {
+              matchType: 'ACCEPTED'
+            },
+            create: {
+              userId: match.session.userId,
+              matchedUserId: match.matchedUserId,
+              matchType: 'ACCEPTED'
+            }
+          }),
+          prisma.userMatchHistory.upsert({
+            where: {
+              userId_matchedUserId: {
+                userId: match.matchedUserId,
+                matchedUserId: match.session.userId
+              }
+            },
+            update: {
+              matchType: 'ACCEPTED'
+            },
+            create: {
+              userId: match.matchedUserId,
+              matchedUserId: match.session.userId,
+              matchType: 'ACCEPTED'
+            }
+          })
+        ]);
+      } catch (historyError) {
+        console.warn('⚠️ Failed to record match history (non-critical):', historyError);
+        // Continue with the confirm process even if history recording fails
+      }
 
       return {
         success: true,
@@ -440,23 +483,7 @@ export class EnhancedMatchingService {
    */
   async getUserMatches(userId: string): Promise<UserMatch[]> {
     try {
-      // First, check if user has an active deployed prompt
-      const activePrompt = await prisma.deployedPrompt.findFirst({
-        where: {
-          userId,
-          status: 'ACTIVE'
-        },
-        include: {
-          theme: true,
-          prompt: true
-        }
-      });
-
-      // If user has an active prompt, find matches
-      if (activePrompt) {
-        console.log('🔍 User has active prompt, finding matches...');
-        await this.findMatches(userId, activePrompt.id);
-      }
+      console.log('🔍 Getting existing matches for user:', userId);
 
       // Get existing match results
       const matchResults = await prisma.matchResult.findMany({
@@ -522,7 +549,15 @@ export class EnhancedMatchingService {
   async declineMatch(userId: string, matchId: string): Promise<void> {
     try {
       const match = await prisma.matchResult.findUnique({
-        where: { id: matchId }
+        where: { id: matchId },
+        include: {
+          session: {
+            include: {
+              user: true
+            }
+          },
+          matchedUser: true
+        }
       });
 
       if (!match) {
@@ -535,21 +570,52 @@ export class EnhancedMatchingService {
         data: { status: MatchStatus.DECLINED }
       });
 
-      // Record match history
-      await prisma.userMatchHistory.create({
-        data: {
-          userId: userId,
-          matchedUserId: match.matchedUserId,
-          matchType: 'DECLINED'
-        }
-      });
+      // Record match history (use upsert to handle duplicates)
+      try {
+        await prisma.userMatchHistory.upsert({
+          where: {
+            userId_matchedUserId: {
+              userId: userId,
+              matchedUserId: match.matchedUserId
+            }
+          },
+          update: {
+            matchType: 'DECLINED'
+          },
+          create: {
+            userId: userId,
+            matchedUserId: match.matchedUserId,
+            matchType: 'DECLINED'
+          }
+        });
+      } catch (historyError) {
+        console.warn('⚠️ Failed to record match history (non-critical):', historyError);
+        // Continue with the decline process even if history recording fails
+      }
 
-      // Emit WebSocket event for match decline
-      matchSocketService.sendMatchStatusChanged(match.matchedUserId, { 
+      // Emit WebSocket event for match decline to both users
+      const statusData = {
         matchId, 
         status: 'DECLINED', 
-        userId: match.matchedUserId 
-      });
+        userId: userId 
+      };
+      
+      console.log('🔔 Sending decline WebSocket events for match:', matchId);
+      console.log('🔔 User who declined:', userId);
+      console.log('🔔 Session user:', match.session?.userId);
+      console.log('🔔 Matched user:', match.matchedUserId);
+      
+      // Notify the user who declined
+      matchSocketService.sendMatchStatusChanged(userId, statusData);
+      
+      // Notify the other user involved in the match
+      // We need to determine who the other user is based on the match structure
+      const otherUserId = match.session?.userId === userId ? match.matchedUserId : match.session?.userId;
+      console.log('🔔 Other user to notify:', otherUserId);
+      
+      if (otherUserId) {
+        matchSocketService.sendMatchStatusChanged(otherUserId, statusData);
+      }
     } catch (error) {
       console.error('❌ Error declining match:', error);
       throw error;

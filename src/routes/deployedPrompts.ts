@@ -14,22 +14,13 @@ router.get('/', sessionAuthMiddleware, async (req, res) => {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    // First, expire any prompts that have passed their expiration date
-    await prisma.deployedPrompt.updateMany({
-      where: {
+    // Get only active deployed prompts for faster loading
+    const deployedPrompts = await prisma.deployedPrompt.findMany({
+      where: { 
         userId,
         status: 'ACTIVE',
-        expiresAt: {
-          lt: new Date()
-        }
+        expiresAt: { gte: new Date() }
       },
-      data: {
-        status: 'EXPIRED'
-      }
-    });
-
-    const deployedPrompts = await prisma.deployedPrompt.findMany({
-      where: { userId },
       include: {
         theme: {
           select: {
@@ -44,7 +35,8 @@ router.get('/', sessionAuthMiddleware, async (req, res) => {
           }
         }
       },
-      orderBy: { deployedAt: 'desc' }
+      orderBy: { deployedAt: 'desc' },
+      take: 1 // Only get the most recent active prompt
     });
 
     res.json(deployedPrompts);
@@ -122,6 +114,15 @@ router.post('/', sessionAuthMiddleware, async (req, res) => {
           }
         }
       }
+    });
+
+    // Trigger match finding for the newly deployed prompt
+    const { EnhancedMatchingService } = await import('../matching/services/enhanced-matching.service.js');
+    const matchingService = new EnhancedMatchingService();
+    
+    // Run match finding in background
+    matchingService.findMatches(userId, deployedPrompt.id).catch(error => {
+      console.error('❌ Background match finding failed for new prompt:', error);
     });
 
     res.status(201).json(deployedPrompt);

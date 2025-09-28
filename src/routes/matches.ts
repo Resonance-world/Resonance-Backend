@@ -119,4 +119,40 @@ router.get('/status/:matchId', sessionAuthMiddleware, async (req: AuthenticatedR
   }
 });
 
+// Trigger match finding for user's active prompt
+router.post('/trigger-finding', sessionAuthMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Check if user has an active deployed prompt
+    const activePrompt = await prisma.deployedPrompt.findFirst({
+      where: {
+        userId,
+        status: 'ACTIVE'
+      }
+    });
+
+    if (!activePrompt) {
+      return res.status(404).json({ error: 'No active deployed prompt found' });
+    }
+
+    // Trigger match finding in background
+    enhancedMatchingService.findMatches(userId, activePrompt.id).catch(error => {
+      console.error('❌ Background match finding failed:', error);
+    });
+
+    res.json({ 
+      success: true, 
+      message: 'Match finding triggered successfully' 
+    });
+  } catch (error) {
+    console.error('Error triggering match finding:', error);
+    res.status(500).json({ error: 'Failed to trigger match finding' });
+  }
+});
+
 export default router;
