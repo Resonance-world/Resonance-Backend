@@ -9,6 +9,9 @@ const enhancedMatchingService = new EnhancedMatchingService();
 interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
+    walletAddress: string;
+    isActive: boolean;
+    isVerified: boolean;
   };
 }
 

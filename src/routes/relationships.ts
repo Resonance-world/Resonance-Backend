@@ -4,7 +4,7 @@ import { RelationshipsProvider } from '../relationships/providers/relationships.
 import { SharedUserProvider } from '../users/providers/shared-user.provider';
 import { sessionAuthMiddleware } from '@/middleware/sessionAuth';
 
-const router = Router();
+const router: Router = Router();
 
 // Initialize services
 const relationshipsProvider = new RelationshipsProvider();

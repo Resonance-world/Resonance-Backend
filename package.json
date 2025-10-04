@@ -19,6 +19,9 @@
     "test": "jest"
   },
   "dependencies": {
+    "@nestjs/common": "^11.1.6",
+    "@nestjs/core": "^11.1.6",
+    "@nestjs/websockets": "^11.1.6",
     "@prisma/client": "5.22.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",

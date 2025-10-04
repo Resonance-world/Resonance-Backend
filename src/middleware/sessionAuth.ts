@@ -1,12 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma.js';
 
-interface SessionAuthRequest extends Request {
-  userId?: string;
-  user?: any;
-}
-
-export const sessionAuthMiddleware = async (req: SessionAuthRequest, res: Response, next: NextFunction) => {
+export const sessionAuthMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Get user ID from query parameter or body
     const userId = req.query.userId as string || req.body.userId || req.params.userId;

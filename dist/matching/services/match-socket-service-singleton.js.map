@@ -1,0 +1,1 @@
+{"version":3,"file":"match-socket-service-singleton.js","sourceRoot":"","sources":["../../../src/matching/services/match-socket-service-singleton.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,kBAAkB,EAAE,MAAM,2BAA2B,CAAC;AAE/D,2DAA2D;AAC3D,MAAM,kBAAkB,GAAG,IAAI,kBAAkB,EAAE,CAAC;AAEpD,6BAA6B;AAC5B,MAAc,CAAC,kBAAkB,GAAG,kBAAkB,CAAC;AAExD,OAAO,EAAE,kBAAkB,EAAE,CAAC"}

@@ -496,7 +496,11 @@ export class EnhancedMatchingService {
           session: {
             include: {
               user: true,
-              prompt: true
+              prompt: {
+                include: {
+                  theme: true
+                }
+              }
             }
           },
           matchedUser: {
@@ -518,8 +522,8 @@ export class EnhancedMatchingService {
         
         return {
           id: result.id,
-          question: result.session.question,
-          category: result.session.themeName,
+          question: result.session.prompt?.question || 'Unknown question',
+          category: result.session.prompt?.theme?.name || 'Unknown theme',
           user: otherUser.name || otherUser.username || 'Anonymous',
           userProfile: {
             id: otherUser.id,
@@ -533,7 +537,7 @@ export class EnhancedMatchingService {
           otherUserAccepted: isUser1 ? result.user2_accepted : result.user1_accepted,
           relationshipId: result.status === MatchStatus.CONFIRMED ? 'relationship-id' : undefined,
           compatibilityScore: result.compatibilityScore,
-          deployedAt: result.session.deployedAt
+          deployedAt: result.session.createdAt
         };
       });
     } catch (error) {

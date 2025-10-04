@@ -1,8 +1,8 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { sessionAuthMiddleware } from '../middleware/sessionAuth';
 import { prisma } from '../lib/prisma.js';
 
-const router = Router();
+const router: Router = Router();
 
 // Get all active themes
 router.get('/', async (req, res) => {
