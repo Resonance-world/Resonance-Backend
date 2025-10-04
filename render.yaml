@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: resonance-backend
+    env: node
+    plan: free
+    buildCommand: pnpm install && pnpm run db:generate && pnpm run build
+    startCommand: pnpm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: PORT
+        value: 10000
+    healthCheckPath: /health

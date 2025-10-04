@@ -99,6 +99,14 @@ app.get('/health', (req, res) => {
         environment: process.env.NODE_ENV
     });
 });
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
+});
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { ManageRelationshipsService } from '../relationships/services/manage-relationships.service';
 import { RelationshipsProvider } from '../relationships/providers/relationships.provider';
 import { SharedUserProvider } from '../users/providers/shared-user.provider';
-import { sessionAuthMiddleware } from '@/middleware/sessionAuth';
+import { sessionAuthMiddleware } from '../middleware/sessionAuth';
 const router = Router();
 // Initialize services
 const relationshipsProvider = new RelationshipsProvider();

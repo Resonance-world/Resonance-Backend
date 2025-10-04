@@ -1,5 +1,5 @@
-import { ConversationsProvider } from '@/messages/providers/conversations.provider';
-import { SharedUserProvider } from '@/users/providers/shared-user.provider';
+import { ConversationsProvider } from '../../messages/providers/conversations.provider';
+import { SharedUserProvider } from '../../users/providers/shared-user.provider';
 export declare class GetMyConversationsService {
     private readonly conversationsProvider;
     private readonly userProvider;
