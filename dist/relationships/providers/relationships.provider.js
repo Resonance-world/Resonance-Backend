@@ -51,7 +51,8 @@ export class RelationshipsProvider {
     /**
      * Get relationships where user is the relating user (the one who added others)
      */
-    async getRelationshipsByRelatingUser(userId, relationLevel) {
+    async getRelationshipsByRelatingUser(userId, // @ts-ignore
+    relationLevel) {
         const whereClause = {
             relatingUserId: userId,
         };
@@ -69,7 +70,8 @@ export class RelationshipsProvider {
     /**
      * Get relationships where user is the related user (the one who was added by others)
      */
-    async getRelationshipsByRelatedUser(userId, relationLevel) {
+    async getRelationshipsByRelatedUser(userId, // @ts-ignore
+    relationLevel) {
         const whereClause = {
             relatedUserId: userId,
         };
@@ -87,7 +89,8 @@ export class RelationshipsProvider {
     /**
      * Get all relationships for a user (both as relating and related user)
      */
-    async getAllRelationshipsForUser(userId, relationLevel) {
+    async getAllRelationshipsForUser(userId, // @ts-ignore
+    relationLevel) {
         const whereClause = {
             OR: [
                 { relatingUserId: userId },

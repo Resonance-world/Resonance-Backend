@@ -4,9 +4,12 @@
   "description": "InnerView Mini App Backend API",
   "main": "dist/index.js",
   "type": "module",
+  "exports": {
+    ".": "./dist/index.js"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc --noEmitOnError false --skipLibCheck && tsc-alias && node scripts/fix-imports.js",
+    "build": "tsc -p tsconfig.build.json && tsc-alias && node scripts/fix-imports.js",
     "start": "node dist/index.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",

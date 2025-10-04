@@ -1,5 +1,6 @@
 import { RelationshipsProvider } from '../providers/relationships.provider';
 import { SharedUserProvider } from '../../users/providers/shared-user.provider';
+import pkg from '@prisma/client';
 export declare class ManageRelationshipsService {
     private relationshipsProvider;
     private usersProvider;
@@ -103,7 +104,7 @@ export declare class ManageRelationshipsService {
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        relationLevel: import("@prisma/client").$Enums.RELATION_LEVEL;
+        relationLevel: pkg.$Enums.RELATION_LEVEL;
         relatingUserId: string;
         relatedUserId: string;
     }>;
@@ -206,7 +207,7 @@ export declare class ManageRelationshipsService {
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        relationLevel: import("@prisma/client").$Enums.RELATION_LEVEL;
+        relationLevel: pkg.$Enums.RELATION_LEVEL;
         relatingUserId: string;
         relatedUserId: string;
     }>;
@@ -316,7 +317,7 @@ export declare class ManageRelationshipsService {
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        relationLevel: import("@prisma/client").$Enums.RELATION_LEVEL;
+        relationLevel: pkg.$Enums.RELATION_LEVEL;
         relatingUserId: string;
         relatedUserId: string;
     })[]>;

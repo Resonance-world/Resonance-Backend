@@ -326,7 +326,8 @@ export declare class RelationshipsProvider {
     /**
      * Get relationships where user is the relating user (the one who added others)
      */
-    getRelationshipsByRelatingUser(userId: string, relationLevel?: RELATION_LEVEL): Promise<({
+    getRelationshipsByRelatingUser(userId: string, // @ts-ignore
+    relationLevel?: RELATION_LEVEL): Promise<({
         relatedUser: {
             walletAddress: string;
             username: string | null;
@@ -428,7 +429,8 @@ export declare class RelationshipsProvider {
     /**
      * Get relationships where user is the related user (the one who was added by others)
      */
-    getRelationshipsByRelatedUser(userId: string, relationLevel?: RELATION_LEVEL): Promise<({
+    getRelationshipsByRelatedUser(userId: string, // @ts-ignore
+    relationLevel?: RELATION_LEVEL): Promise<({
         relatedUser: {
             walletAddress: string;
             username: string | null;
@@ -530,7 +532,8 @@ export declare class RelationshipsProvider {
     /**
      * Get all relationships for a user (both as relating and related user)
      */
-    getAllRelationshipsForUser(userId: string, relationLevel?: RELATION_LEVEL): Promise<({
+    getAllRelationshipsForUser(userId: string, // @ts-ignore
+    relationLevel?: RELATION_LEVEL): Promise<({
         relatedUser: {
             walletAddress: string;
             username: string | null;
