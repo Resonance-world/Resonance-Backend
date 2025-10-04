@@ -1,5 +1,5 @@
-import { GetRelationshipProvider } from '@/relationships/providers/get-relationship.provider';
-import { SharedUserProvider } from '@/users/providers/shared-user.provider';
+import { GetRelationshipProvider } from '../../relationships/providers/get-relationship.provider';
+import { SharedUserProvider } from '../../users/providers/shared-user.provider';
 export declare class RelationshipsService {
     private readonly relationshipsProvider;
     private sharedUserProvider;

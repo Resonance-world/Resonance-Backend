@@ -12,7 +12,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer, } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { SocketService } from '../services/socket.service';
+import { SocketService } from '../services/socket.service.js';
 let MessagesGateway = class MessagesGateway {
     socketService;
     constructor(socketService) {
