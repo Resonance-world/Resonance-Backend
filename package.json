@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc --noEmitOnError false --skipLibCheck && tsc-alias",
+    "build": "tsc --noEmitOnError false --skipLibCheck && tsc-alias && node scripts/fix-imports.js",
     "start": "node dist/index.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
@@ -35,6 +35,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@digitak/esrun": "^3.2.26",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",

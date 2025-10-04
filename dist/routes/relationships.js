@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { ManageRelationshipsService } from '../relationships/services/manage-relationships.service';
-import { RelationshipsProvider } from '../relationships/providers/relationships.provider';
-import { SharedUserProvider } from '../users/providers/shared-user.provider';
-import { sessionAuthMiddleware } from '../middleware/sessionAuth';
+import { ManageRelationshipsService } from '../relationships/services/manage-relationships.service.js';
+import { RelationshipsProvider } from '../relationships/providers/relationships.provider.js';
+import { SharedUserProvider } from '../users/providers/shared-user.provider.js';
+import { sessionAuthMiddleware } from '../middleware/sessionAuth.js';
 const router = Router();
 // Initialize services
 const relationshipsProvider = new RelationshipsProvider();
