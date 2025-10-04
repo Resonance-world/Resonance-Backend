@@ -1,5 +1,5 @@
 import { MessagesProvider } from '../providers/messages.provider';
-import { RelationshipsService } from '../../relationships/services/check-relationships.service';
+import { RelationshipsService } from '@/relationships/services/check-relationships.service';
 import { SocketService } from './socket.service';
 export declare class WriteMessageService {
     private readonly messagesProvider;

@@ -1,6 +1,5 @@
-import pkg from '@prisma/client';
-const { MatchStatus, RELATION_LEVEL  } = pkg;;
-import { matchSocketService } from './match-socket-service-singleton.js';
+import { MatchStatus, RELATION_LEVEL } from '@prisma/client';
+import { matchSocketService } from './match-socket-service-singleton';
 import { prisma } from '../../lib/prisma.js';
 export class EnhancedMatchingService {
     /**

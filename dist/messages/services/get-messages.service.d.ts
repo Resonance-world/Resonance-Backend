@@ -1,5 +1,5 @@
-import { MessagesProvider } from '../../messages/providers/messages.provider';
-import { RelationshipsService } from '../../relationships/services/check-relationships.service';
+import { MessagesProvider } from '@/messages/providers/messages.provider';
+import { RelationshipsService } from '@/relationships/services/check-relationships.service';
 export declare class GetMessagesService {
     private readonly messagesProvider;
     private readonly relationshipsService;

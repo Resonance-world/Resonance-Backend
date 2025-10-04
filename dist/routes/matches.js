@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { sessionAuthMiddleware } from '../middleware/sessionAuth.js';
-import { EnhancedMatchingService } from '../matching/services/enhanced-matching.service.js';
+import { sessionAuthMiddleware } from '../middleware/sessionAuth';
+import { EnhancedMatchingService } from '../matching/services/enhanced-matching.service';
 import { prisma } from '../lib/prisma.js';
 const router = Router();
 const enhancedMatchingService = new EnhancedMatchingService();

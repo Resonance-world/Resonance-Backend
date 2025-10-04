@@ -1,5 +1,4 @@
-import pkg from '@prisma/client';
-const { RELATION_LEVEL } = pkg;
+import { RELATION_LEVEL } from '@prisma/client';
 export class ManageRelationshipsService {
     relationshipsProvider;
     usersProvider;

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { calculateZodiacSign } from '../utils/zodiac.js';
+import { calculateZodiacSign } from '../utils/zodiac';
 import { prisma } from '../lib/prisma.js';
 const router = Router();
 // Get onboarding status for a user

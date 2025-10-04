@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { sessionAuthMiddleware } from '../middleware/sessionAuth.js';
+import { sessionAuthMiddleware } from '../middleware/sessionAuth';
 import { prisma } from '../lib/prisma.js';
 const router = Router();
 // Get user's deployed prompts
