@@ -11,6 +11,12 @@ function addJsExtensions(filePath) {
   try {
     let content = fs.readFileSync(filePath, 'utf8');
     
+    // Fix Prisma imports for ES modules
+    content = content.replace(
+      /import\s*{\s*([^}]+)\s*}\s*from\s*['"]@prisma\/client['"]/g,
+      'import pkg from \'@prisma/client\';\nconst { $1 } = pkg;'
+    );
+    
     // Add .js extension to relative imports that don't have it
     const importRegex = /from\s+['"](\.\.?\/[^'"]*?)(?<!\.js)['"]/g;
     
