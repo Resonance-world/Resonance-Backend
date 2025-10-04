@@ -3,7 +3,7 @@ services:
     name: resonance-backend
     env: node
     plan: free
-    buildCommand: pnpm install && npx prisma generate && pnpm run build
+    buildCommand: npx prisma generate && pnpm run build
     startCommand: pnpm start
     envVars:
       - key: NODE_ENV
