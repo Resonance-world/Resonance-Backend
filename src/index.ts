@@ -161,6 +161,7 @@ server.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
   console.log(`📡 Socket.IO enabled`);
+  console.log(`🔗 CORS enabled for all origins (development mode)`);
 });
 
 export { io }; 
