@@ -98,8 +98,28 @@ const limiter = rateLimit({
 // Middleware
 app.use(helmet());
 app.use(limiter);
+// CORS configuration
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:3000', 'http://localhost:3001'];
+
 app.use(cors({
-  origin: (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(','),
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or Postman)
+    if (!origin) return callback(null, true);
+    
+    // If ALLOWED_ORIGINS is set, use it; otherwise allow all origins
+    if (process.env.ALLOWED_ORIGINS) {
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    } else {
+      // Development mode - allow all origins
+      callback(null, true);
+    }
+  },
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -112,15 +132,6 @@ app.get('/health', (req, res) => {
     status: 'OK', 
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV 
-  });
-});
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
   });
 });
 
