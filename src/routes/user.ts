@@ -1,4 +1,5 @@
 import { Router, type Router as ExpressRouter } from 'express';
+import { body, validationResult } from 'express-validator';
 import { authMiddleware } from '../middleware/auth.js';
 import { sessionAuthMiddleware } from '../middleware/sessionAuth.js';
 import { calculateAgeFromString } from '../utils/age.js';
@@ -72,8 +73,29 @@ router.get('/profile', sessionAuthMiddleware, async (req, res) => {
 });
 
 // Update user profile (for authenticated users)
-router.put('/profile', sessionAuthMiddleware, async (req, res) => {
+router.put('/profile', sessionAuthMiddleware, [
+  body('username').optional().isLength({ min: 1, max: 50 }).withMessage('Username must be 1-50 characters'),
+  body('profilePictureUrl').optional().isURL().withMessage('Invalid profile picture URL'),
+  body('privateProfilePictureUrl').optional().isString().withMessage('Invalid private profile picture'),
+  body('currentAvailability').optional().isIn(['available', 'busy', 'away']).withMessage('Invalid availability status'),
+  body('locationCountry').optional().isLength({ max: 100 }).withMessage('Country name too long'),
+  body('locationCity').optional().isLength({ max: 100 }).withMessage('City name too long'),
+  body('locationLat').optional().isFloat({ min: -90, max: 90 }).withMessage('Invalid latitude'),
+  body('locationLng').optional().isFloat({ min: -180, max: 180 }).withMessage('Invalid longitude'),
+  body('websiteUrl').optional().isURL().withMessage('Invalid website URL'),
+  body('dateOfBirth').optional().isISO8601().withMessage('Invalid date format'),
+], async (req, res) => {
   try {
+    // Validate input
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Validation failed',
+        details: errors.array()
+      });
+    }
+
     const userId = (req as any).userId;
     
     if (!userId) {

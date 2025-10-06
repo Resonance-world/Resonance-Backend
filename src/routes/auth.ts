@@ -1,12 +1,28 @@
 import { Router, type Router as ExpressRouter } from 'express';
 import jwt from 'jsonwebtoken';
+import { body, validationResult } from 'express-validator';
 import { prisma } from '../lib/prisma.js';
 
 const router: ExpressRouter = Router();
 
 // World ID verification endpoint
-router.post('/verify', async (req, res) => {
+router.post('/verify', [
+  body('walletAddress').isEthereumAddress().withMessage('Invalid wallet address'),
+  body('nullifier_hash').isString().isLength({ min: 1 }).withMessage('Invalid nullifier hash'),
+  body('verification_level').isString().withMessage('Invalid verification level'),
+  body('action').isString().withMessage('Invalid action'),
+], async (req, res) => {
   try {
+    // Validate input
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Validation failed',
+        details: errors.array()
+      });
+    }
+
     const { nullifier_hash, verification_level, action, walletAddress, username, profilePictureUrl } = req.body;
 
     console.log('🔐 Processing World ID verification:', {
@@ -118,8 +134,20 @@ router.post('/validate', async (req, res) => {
 });
 
 // Generate JWT token for authenticated user
-router.post('/token', async (req, res) => {
+router.post('/token', [
+  body('walletAddress').isEthereumAddress().withMessage('Invalid wallet address'),
+], async (req, res) => {
   try {
+    // Validate input
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Validation failed',
+        details: errors.array()
+      });
+    }
+
     const { walletAddress } = req.body;
 
     if (!walletAddress) {

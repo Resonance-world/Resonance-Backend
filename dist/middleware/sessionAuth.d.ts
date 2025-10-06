@@ -1,3 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-export declare const sessionAuthMiddleware: (req: Request, res: Response, next: NextFunction) => Promise<Response<any, Record<string, any>>>;
+interface AuthRequest extends Request {
+    userId?: string;
+    user?: any;
+}
+export declare const sessionAuthMiddleware: (req: AuthRequest, res: Response, next: NextFunction) => Promise<Response<any, Record<string, any>>>;
+export {};
 //# sourceMappingURL=sessionAuth.d.ts.map

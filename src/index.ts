@@ -104,20 +104,26 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
   : ['http://localhost:3000', 'http://localhost:3001'];
 
+// Add production frontend URL to allowed origins
+if (process.env.NODE_ENV === 'production' && process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or Postman)
     if (!origin) return callback(null, true);
     
-    // If ALLOWED_ORIGINS is set, use it; otherwise allow all origins
-    if (process.env.ALLOWED_ORIGINS) {
+    // Production mode - strict origin checking
+    if (process.env.NODE_ENV === 'production') {
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        console.log('❌ CORS blocked origin:', origin);
         callback(new Error('Not allowed by CORS'));
       }
     } else {
-      // Development mode - allow all origins
+      // Development mode - allow all origins for flexibility
       callback(null, true);
     }
   },

@@ -1,13 +1,33 @@
 import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma.js';
 
-export const sessionAuthMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+interface AuthRequest extends Request {
+  userId?: string;
+  user?: any;
+}
+
+export const sessionAuthMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     // Get user ID from query parameter or body
     const userId = req.query.userId as string || req.body.userId || req.params.userId;
+    const token = req.header('Authorization')?.replace('Bearer ', '');
 
     if (!userId) {
       return res.status(401).json({ success: false, error: 'User ID required' });
+    }
+
+    // If JWT token is provided, validate it first (enhanced security)
+    if (token && process.env.JWT_SECRET) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET) as any;
+        if (decoded.userId !== userId) {
+          return res.status(401).json({ success: false, error: 'Token mismatch' });
+        }
+      } catch (jwtError) {
+        // If JWT validation fails, continue with existing flow for backward compatibility
+        console.log('⚠️ JWT validation failed, continuing with session auth:', jwtError);
+      }
     }
 
     // Verify user exists in database
