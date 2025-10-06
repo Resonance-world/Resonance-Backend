@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
+import https from 'https';
 
 // Import WebSocket service singletons
 import { socketService } from './messages/services/socket-service-singleton.js';
@@ -162,6 +163,45 @@ server.listen(port, () => {
   console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
   console.log(`📡 Socket.IO enabled`);
   console.log(`🔗 CORS enabled for all origins (development mode)`);
+  
+  // Keep-alive mechanism to prevent Render free tier hibernation
+  if (process.env.NODE_ENV === 'production') {
+    const SELF_PING_INTERVAL = 10 * 60 * 1000; // 10 minutes
+    const SERVICE_URL = process.env.RENDER_EXTERNAL_URL || `https://resonance-backend-nwjg.onrender.com`;
+    
+    setInterval(() => {
+      const url = new URL(`${SERVICE_URL}/health`);
+      
+      const options = {
+        hostname: url.hostname,
+        port: url.port || 443,
+        path: url.pathname,
+        method: 'GET',
+        timeout: 5000
+      };
+      
+      const req = https.request(options, (res) => {
+        if (res.statusCode === 200) {
+          console.log('⏰ Keep-alive ping successful');
+        } else {
+          console.log(`⏰ Keep-alive ping returned status: ${res.statusCode}`);
+        }
+      });
+      
+      req.on('error', (error) => {
+        console.error('⏰ Keep-alive ping failed:', error.message);
+      });
+      
+      req.on('timeout', () => {
+        console.error('⏰ Keep-alive ping timed out');
+        req.destroy();
+      });
+      
+      req.end();
+    }, SELF_PING_INTERVAL);
+    
+    console.log('⏰ Keep-alive mechanism enabled (pinging every 10 minutes)');
+  }
 });
 
 export { io }; 
