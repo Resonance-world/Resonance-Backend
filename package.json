@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc --noEmitOnError false --skipLibCheck || true && tsc-alias && node scripts/add-js-extensions.js",
+    "build": "pnpm install && tsc --noEmitOnError false --skipLibCheck || true && tsc-alias && node scripts/add-js-extensions.js",
     "start": "node dist/index.js",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
