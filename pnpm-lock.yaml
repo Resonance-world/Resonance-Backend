@@ -47,6 +47,12 @@ importers:
       socket.io:
         specifier: ^4.8.1
         version: 4.8.1
+      tsc-alias:
+        specifier: ^1.8.16
+        version: 1.8.16
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.2
       zod:
         specifier: ^3.24.1
         version: 3.25.76
@@ -87,15 +93,9 @@ importers:
       prisma:
         specifier: ^5.22.0
         version: 5.22.0
-      tsc-alias:
-        specifier: ^1.8.16
-        version: 1.8.16
       tsx:
         specifier: ^4.19.2
         version: 4.20.4
-      typescript:
-        specifier: ^5.7.2
-        version: 5.9.2
 
 packages:
 
