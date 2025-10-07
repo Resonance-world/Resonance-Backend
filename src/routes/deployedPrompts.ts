@@ -2,10 +2,16 @@ import { Router, Request, Response } from 'express';
 import { sessionAuthMiddleware } from '../middleware/sessionAuth';
 import { prisma } from '../lib/prisma.js';
 
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+  };
+}
+
 const router: Router = Router();
 
 // Get user's deployed prompts
-router.get('/', sessionAuthMiddleware, async (req, res) => {
+router.get('/', sessionAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id;
     
@@ -46,7 +52,7 @@ router.get('/', sessionAuthMiddleware, async (req, res) => {
 });
 
 // Deploy a new prompt
-router.post('/', sessionAuthMiddleware, async (req, res) => {
+router.post('/', sessionAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id;
     const { promptId, customPrompt, themeId, themeName, question } = req.body;
@@ -132,7 +138,7 @@ router.post('/', sessionAuthMiddleware, async (req, res) => {
 });
 
 // Update deployed prompt status (mark matches as shown)
-router.patch('/:id/matches-shown', sessionAuthMiddleware, async (req, res) => {
+router.patch('/:id/matches-shown', sessionAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id;
     const { id } = req.params;
@@ -163,7 +169,7 @@ router.patch('/:id/matches-shown', sessionAuthMiddleware, async (req, res) => {
 });
 
 // Cancel a deployed prompt
-router.patch('/:id/cancel', sessionAuthMiddleware, async (req, res) => {
+router.patch('/:id/cancel', sessionAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user?.id;
     const { id } = req.params;

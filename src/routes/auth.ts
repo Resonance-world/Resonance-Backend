@@ -122,19 +122,10 @@ router.post('/validate', async (req, res) => {
 });
 
 // Generate JWT token for authenticated user
-router.post('/token', [
-  body('walletAddress').isEthereumAddress().withMessage('Invalid wallet address'),
-], async (req, res) => {
+router.post('/token', async (req, res) => {
   try {
-    // Validate input
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Validation failed',
-        details: errors.array()
-      });
-    }
+    // Log the request body for debugging (without failing requests)
+    console.log('🔍 Token request body:', JSON.stringify(req.body, null, 2));
 
     const { walletAddress } = req.body;
 
