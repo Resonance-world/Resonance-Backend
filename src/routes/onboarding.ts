@@ -8,8 +8,11 @@ const router: Router = Router();
 router.get('/status/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
+    
+    console.log('🔍 Onboarding status request for:', userId);
 
-    const user = await prisma.user.findUnique({
+    // Try to find user by ID first, then by wallet address
+    let user = await prisma.user.findUnique({
       where: {
         id: userId
       },
@@ -32,7 +35,35 @@ router.get('/status/:userId', async (req, res) => {
       }
     });
 
+    // If not found by ID, try by wallet address (for backward compatibility)
+    if (!user && userId.startsWith('0x')) {
+      console.log('🔍 User not found by ID, trying wallet address...');
+      user = await prisma.user.findUnique({
+        where: {
+          walletAddress: userId
+        },
+        select: {
+          id: true,
+          onboardingCompleted: true,
+          onboardingCompletedAt: true,
+          name: true,
+          dateOfBirth: true,
+          zodiacSign: true,
+          sex: true,
+          locationCity: true,
+          locationCountry: true,
+          surroundingDetail: true,
+          essenceKeywords: true,
+          essenceStory: true,
+          communicationTone: true,
+          motivationForConnection: true,
+          currentCuriosity: true
+        }
+      });
+    }
+
     if (!user) {
+      console.log('❌ User not found:', userId);
       return res.status(404).json({
         success: false,
         error: 'User not found'
