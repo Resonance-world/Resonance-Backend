@@ -3,7 +3,7 @@ services:
     name: resonance-backend
     env: node
     plan: free
-    buildCommand: pnpm install && pnpm run build
+    buildCommand: pnpm run build
     startCommand: pnpm start
     envVars:
       - key: NODE_ENV
