@@ -62,6 +62,10 @@ model User {
   matchedUserHistory        UserMatchHistory[] @relation("MatchedUserHistory")
   userMatchHistory          UserMatchHistory[] @relation("UserMatchHistory")
 
+  @@index([isActive])
+  @@index([onboardingCompleted])
+  @@index([currentAvailability])
+  @@index([lastActiveAt])
   @@map("users")
 }
 
@@ -78,6 +82,10 @@ model Message {
   receiver    User?       @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
   sender      User        @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
 
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([createdAt])
+  @@index([senderId, receiverId])
   @@map("messages")
 }
 
@@ -92,6 +100,8 @@ model ChatbotSession {
   messages    ChatbotMessage[]
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+  @@index([isActive])
   @@map("chatbot_sessions")
 }
 
@@ -103,6 +113,8 @@ model ChatbotMessage {
   createdAt DateTime       @default(now())
   session   ChatbotSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
+  @@index([sessionId])
+  @@index([createdAt])
   @@map("chatbot_messages")
 }
 
@@ -130,6 +142,7 @@ model Theme {
   deployedPrompts DeployedPrompt[]
   prompts         Prompt[]
 
+  @@index([isActive])
   @@map("themes")
 }
 
@@ -143,6 +156,8 @@ model Prompt {
   deployedPrompts DeployedPrompt[]
   theme           Theme            @relation(fields: [themeId], references: [id], onDelete: Cascade)
 
+  @@index([themeId])
+  @@index([isActive])
   @@map("prompts")
 }
 
@@ -165,6 +180,10 @@ model DeployedPrompt {
   user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   matchingSessions MatchingSession[]
 
+  @@index([userId])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([userId, status])
   @@map("deployed_prompts")
 }
 
@@ -179,6 +198,9 @@ model MatchingSession {
   prompt       DeployedPrompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
   user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+  @@index([promptId])
+  @@index([userId, promptId])
   @@map("matching_sessions")
 }
 
@@ -199,6 +221,9 @@ model MatchResult {
   matchedUser        User            @relation(fields: [matchedUserId], references: [id], onDelete: Cascade)
   session            MatchingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
+  @@index([sessionId])
+  @@index([matchedUserId])
+  @@index([status])
   @@unique([sessionId, matchedUserId])
   @@map("match_results")
 }
