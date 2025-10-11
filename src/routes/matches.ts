@@ -129,6 +129,80 @@ router.get('/matched-users', sessionAuthMiddleware, async (req: AuthenticatedReq
   }
 });
 
+// Get conversation prompt for a specific user pair
+router.get('/conversation-prompt/:userId/:otherUserId', sessionAuthMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const currentUserId = (req as any).userId;
+    const { userId, otherUserId } = req.params;
+    
+    if (!currentUserId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Verify the current user is one of the users in the conversation
+    if (currentUserId !== userId && currentUserId !== otherUserId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    console.log('🔍 Getting conversation prompt for users:', userId, 'and', otherUserId);
+
+    // Find the match between these two users
+    const match = await prisma.matchResult.findFirst({
+      where: {
+        OR: [
+          { 
+            session: { userId: userId },
+            matchedUserId: otherUserId
+          },
+          { 
+            session: { userId: otherUserId },
+            matchedUserId: userId
+          }
+        ],
+        status: 'CONFIRMED'
+      },
+      include: {
+        session: {
+          include: {
+            prompt: {
+              include: {
+                theme: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!match) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'No confirmed match found between these users' 
+      });
+    }
+
+    const prompt = match.session.prompt;
+    if (!prompt) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Prompt not found for this match' 
+      });
+    }
+
+    res.json({
+      success: true,
+      prompt: {
+        question: prompt.question,
+        theme: prompt.theme?.name || 'General',
+        themeId: prompt.themeId
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error getting conversation prompt:', error);
+    res.status(500).json({ error: 'Failed to get conversation prompt' });
+  }
+});
+
 // Helper function to calculate compatibility score
 function calculateCompatibilityScore(userPrompt: any, matchPrompt: any): number {
   let score = 0;
