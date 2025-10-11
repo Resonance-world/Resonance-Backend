@@ -13,8 +13,12 @@ const router: Router = Router();
 // Get user's deployed prompts
 router.get('/', sessionAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
-    // Get userId from session middleware or query parameter (for frontend compatibility)
-    const userId = req.user?.id || req.query.userId as string;
+    // Get userId from session middleware (req.userId is set by sessionAuthMiddleware)
+    const userId = (req as any).userId || req.query.userId as string;
+    
+    console.log('🔍 Deployed prompts request - userId:', userId);
+    console.log('🔍 Deployed prompts request - req.userId:', (req as any).userId);
+    console.log('🔍 Deployed prompts request - req.user:', (req as any).user);
     
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -45,6 +49,7 @@ router.get('/', sessionAuthMiddleware, async (req: AuthenticatedRequest, res) =>
       take: 1 // Only get the most recent active prompt
     });
 
+    console.log('🔍 Found deployed prompts:', deployedPrompts.length, deployedPrompts);
     res.json(deployedPrompts);
   } catch (error) {
     console.error('Error fetching deployed prompts:', error);
