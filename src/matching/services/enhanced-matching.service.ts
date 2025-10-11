@@ -517,8 +517,16 @@ export class EnhancedMatchingService {
       });
 
       return matchResults.map(result => {
-        const isUser1 = result.session.userId === userId;
-        const otherUser = isUser1 ? result.matchedUser : result.session.user;
+        // Fix: Correctly determine the other user
+        const isSessionOwner = result.session.userId === userId;
+        const otherUser = isSessionOwner ? result.matchedUser : result.session.user;
+        
+        // Additional safety check: ensure we're not showing the user themselves
+        if (otherUser.id === userId) {
+          console.error('🚨 CRITICAL: Self-match detected! User:', userId, 'Other user:', otherUser.id);
+          // Skip this match to prevent self-matching
+          return null;
+        }
         
         return {
           id: result.id,
@@ -533,13 +541,13 @@ export class EnhancedMatchingService {
             personalitySummary: otherUser.personalitySummary
           },
           status: result.status,
-          userAccepted: isUser1 ? result.user1_accepted : result.user2_accepted,
-          otherUserAccepted: isUser1 ? result.user2_accepted : result.user1_accepted,
+          userAccepted: isSessionOwner ? result.user1_accepted : result.user2_accepted,
+          otherUserAccepted: isSessionOwner ? result.user2_accepted : result.user1_accepted,
           relationshipId: result.status === MatchStatus.CONFIRMED ? 'relationship-id' : undefined,
           compatibilityScore: result.compatibilityScore,
           deployedAt: result.session.createdAt
         };
-      });
+      }).filter(match => match !== null); // Remove any null matches (self-matches)
     } catch (error) {
       console.error('❌ Error getting user matches:', error);
       throw error;
