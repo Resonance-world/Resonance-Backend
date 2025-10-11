@@ -135,6 +135,28 @@ export class EnhancedMatchingService {
         }
       });
 
+      // Also check UserMatchHistory for previously declined matches
+      const declinedMatches = await prisma.userMatchHistory.findMany({
+        where: {
+          OR: [
+            // This user declined others
+            {
+              userId: userId,
+              matchedUserId: {
+                in: potentialMatches.map(m => m.userId)
+              }
+            },
+            // Others declined this user
+            {
+              matchedUserId: userId,
+              userId: {
+                in: potentialMatches.map(m => m.userId)
+              }
+            }
+          ]
+        }
+      });
+
       const existingMatchedUserIds = new Set(existingMatches.map(m => {
         if (!m.session) {
           console.warn('⚠️ Match result missing session data:', m.id);
@@ -143,8 +165,23 @@ export class EnhancedMatchingService {
         return m.session.userId === userId ? m.matchedUserId : m.session.userId;
       }).filter(Boolean));
 
-      // Filter out already matched users
-      const newMatches = potentialMatches.filter(m => !existingMatchedUserIds.has(m.userId));
+      // Add declined matches to the exclusion set
+      const declinedUserIds = new Set(declinedMatches.map(m => 
+        m.userId === userId ? m.matchedUserId : m.userId
+      ));
+
+      // Combine both sets
+      const allExcludedUserIds = new Set([...existingMatchedUserIds, ...declinedUserIds]);
+
+      console.log('🔍 Duplicate prevention stats:', {
+        potentialMatches: potentialMatches.length,
+        existingMatches: existingMatchedUserIds.size,
+        declinedMatches: declinedUserIds.size,
+        totalExcluded: allExcludedUserIds.size
+      });
+
+      // Filter out already matched users and previously declined users
+      const newMatches = potentialMatches.filter(m => !allExcludedUserIds.has(m.userId));
 
       console.log('🔍 New matches to create:', newMatches.length);
 
