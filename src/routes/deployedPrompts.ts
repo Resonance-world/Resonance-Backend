@@ -13,7 +13,8 @@ const router: Router = Router();
 // Get user's deployed prompts
 router.get('/', sessionAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = req.user?.id;
+    // Get userId from session middleware or query parameter (for frontend compatibility)
+    const userId = req.user?.id || req.query.userId as string;
     
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
