@@ -214,6 +214,7 @@ model MatchResult {
   personalityMatch   Boolean
   locationMatch      Boolean
   createdAt          DateTime        @default(now())
+  expiresAt          DateTime        @default(dbgenerated("(now() + interval '7 days')"))
   confirmed_at       DateTime?
   status             MatchStatus     @default(PENDING)
   user1_accepted     Boolean         @default(false)
@@ -224,6 +225,7 @@ model MatchResult {
   @@index([sessionId])
   @@index([matchedUserId])
   @@index([status])
+  @@index([expiresAt])
   @@unique([sessionId, matchedUserId])
   @@map("match_results")
 }

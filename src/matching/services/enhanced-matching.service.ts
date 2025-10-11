@@ -35,6 +35,9 @@ export class EnhancedMatchingService {
    */
   async findMatches(userId: string, deployedPromptId: string): Promise<UserMatch[]> {
     try {
+      // Clean up expired matches first
+      await this.cleanupExpiredMatches();
+      
       // Get user's deployed prompt
       const userPrompt = await prisma.deployedPrompt.findUnique({
         where: { id: deployedPromptId },
@@ -190,6 +193,9 @@ export class EnhancedMatchingService {
       for (const match of newMatches) {
         const compatibilityScore = this.calculateCompatibilityScore(userPrompt, match);
         
+        // Set expiration to 3 days from now (matches expire after 3 days)
+        const expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+        
         const matchResult = await prisma.matchResult.create({
           data: {
             sessionId: matchingSession.id, // Using the matching session ID
@@ -199,7 +205,8 @@ export class EnhancedMatchingService {
             questionMatch: userPrompt.question === match.question,
             personalityMatch: false, // TODO: Implement personality matching
             locationMatch: false, // TODO: Implement location matching
-            status: MatchStatus.PENDING
+            status: MatchStatus.PENDING,
+            expiresAt: expiresAt
           },
           include: {
             matchedUser: {
@@ -515,19 +522,48 @@ export class EnhancedMatchingService {
   }
 
   /**
+   * Clean up expired matches
+   */
+  async cleanupExpiredMatches(): Promise<number> {
+    try {
+      const result = await prisma.matchResult.updateMany({
+        where: {
+          expiresAt: {
+            lt: new Date()
+          },
+          status: MatchStatus.PENDING
+        },
+        data: {
+          status: MatchStatus.EXPIRED
+        }
+      });
+      
+      console.log('🧹 Cleaned up expired matches:', result.count);
+      return result.count;
+    } catch (error) {
+      console.error('❌ Error cleaning up expired matches:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get user's matches with status
    */
   async getUserMatches(userId: string): Promise<UserMatch[]> {
     try {
       console.log('🔍 Getting existing matches for user:', userId);
 
-      // Get existing match results
+      // Get existing match results (excluding expired ones)
       const matchResults = await prisma.matchResult.findMany({
         where: {
           OR: [
             { session: { userId: userId } },
             { matchedUserId: userId }
-          ]
+          ],
+          // Exclude expired matches
+          expiresAt: {
+            gt: new Date()
+          }
         },
         include: {
           session: {
