@@ -34,6 +34,25 @@ router.get('/', sessionAuthMiddleware, async (req: AuthenticatedRequest, res: Re
   }
 });
 
+// Get user's expired matches
+router.get('/expired', sessionAuthMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Get user's expired matches using enhanced matching service
+    const expiredMatches = await enhancedMatchingService.getUserExpiredMatches(userId);
+    
+    res.json(expiredMatches);
+  } catch (error) {
+    console.error('Error fetching expired matches:', error);
+    res.status(500).json({ error: 'Failed to fetch expired matches' });
+  }
+});
+
 // Get matched users (users who both have accepted the match)
 router.get('/matched-users', sessionAuthMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {

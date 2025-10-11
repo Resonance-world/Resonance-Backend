@@ -571,6 +571,48 @@ export class EnhancedMatchingService {
   }
 
   /**
+   * Expire matches for a specific deployed prompt (when prompt is cancelled or expires)
+   */
+  async expireMatchesForPrompt(deployedPromptId: string): Promise<number> {
+    try {
+      console.log('🕒 Expiring matches for deployed prompt:', deployedPromptId);
+      
+      // Find all matching sessions for this deployed prompt
+      const matchingSessions = await prisma.matchingSession.findMany({
+        where: {
+          promptId: deployedPromptId
+        }
+      });
+
+      if (matchingSessions.length === 0) {
+        console.log('📝 No matching sessions found for prompt:', deployedPromptId);
+        return 0;
+      }
+
+      const sessionIds = matchingSessions.map(session => session.id);
+
+      // Update all match results for these sessions to expired status
+      const result = await prisma.matchResult.updateMany({
+        where: {
+          sessionId: {
+            in: sessionIds
+          },
+          status: MatchStatus.PENDING // Only expire pending matches
+        },
+        data: {
+          status: MatchStatus.EXPIRED
+        }
+      });
+      
+      console.log('🕒 Expired matches for prompt:', deployedPromptId, 'Count:', result.count);
+      return result.count;
+    } catch (error) {
+      console.error('❌ Error expiring matches for prompt:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Clean up expired matches
    */
   async cleanupExpiredMatches(): Promise<number> {
@@ -591,6 +633,108 @@ export class EnhancedMatchingService {
       return result.count;
     } catch (error) {
       console.error('❌ Error cleaning up expired matches:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user's expired matches
+   */
+  async getUserExpiredMatches(userId: string): Promise<UserMatch[]> {
+    try {
+      console.log('🔍 Getting expired matches for user:', userId);
+
+      // Get expired match results
+      const matchResults = await prisma.matchResult.findMany({
+        where: {
+          AND: [
+            {
+              OR: [
+                { session: { userId: userId } },
+                { matchedUserId: userId }
+              ]
+            },
+            {
+              OR: [
+                { status: MatchStatus.EXPIRED },
+                { expiresAt: { lt: new Date() } }
+              ]
+            }
+          ]
+        },
+        include: {
+          session: {
+            include: {
+              user: true,
+              prompt: {
+                include: {
+                  theme: true
+                }
+              }
+            }
+          },
+          matchedUser: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              profilePictureUrl: true,
+              personalitySummary: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      // Process matches and deduplicate by other user ID (same logic as getUserMatches)
+      const processedMatches = matchResults.map(result => {
+        const isSessionOwner = result.session.userId === userId;
+        const otherUser = isSessionOwner ? result.matchedUser : result.session.user;
+        
+        if (otherUser.id === userId) {
+          console.error('🚨 CRITICAL: Self-match detected in expired matches! User:', userId, 'Other user:', otherUser.id);
+          return null;
+        }
+        
+        return {
+          id: result.id,
+          otherUserId: otherUser.id,
+          question: result.session.prompt?.question || 'Unknown question',
+          category: result.session.prompt?.theme?.name || 'Unknown theme',
+          user: otherUser.name || otherUser.username || 'Anonymous',
+          userProfile: {
+            id: otherUser.id,
+            name: otherUser.name,
+            username: otherUser.username,
+            profilePictureUrl: otherUser.profilePictureUrl,
+            personalitySummary: otherUser.personalitySummary
+          },
+          status: result.status,
+          userAccepted: isSessionOwner ? result.user1_accepted : result.user2_accepted,
+          otherUserAccepted: isSessionOwner ? result.user2_accepted : result.user1_accepted,
+          relationshipId: result.status === MatchStatus.CONFIRMED ? 'relationship-id' : undefined,
+          compatibilityScore: result.compatibilityScore,
+          deployedAt: result.session.createdAt,
+          expiredAt: result.expiresAt
+        };
+      }).filter(match => match !== null);
+
+      // Deduplicate matches by other user ID (keep the most recent one)
+      const uniqueMatches = new Map();
+      processedMatches.forEach(match => {
+        const existingMatch = uniqueMatches.get(match.otherUserId);
+        if (!existingMatch || new Date(match.deployedAt) > new Date(existingMatch.deployedAt)) {
+          uniqueMatches.set(match.otherUserId, match);
+        }
+      });
+
+      // Remove the otherUserId field before returning
+      return Array.from(uniqueMatches.values()).map(match => {
+        const { otherUserId, ...matchWithoutOtherUserId } = match;
+        return matchWithoutOtherUserId;
+      });
+    } catch (error) {
+      console.error('❌ Error getting expired matches:', error);
       throw error;
     }
   }

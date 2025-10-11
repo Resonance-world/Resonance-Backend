@@ -193,6 +193,18 @@ router.patch('/:id/cancel', sessionAuthMiddleware, async (req: AuthenticatedRequ
       return res.status(404).json({ error: 'Active deployed prompt not found' });
     }
 
+    // Expire all matches for this cancelled prompt
+    const { EnhancedMatchingService } = await import('../matching/services/enhanced-matching.service.js');
+    const matchingService = new EnhancedMatchingService();
+    
+    try {
+      const expiredCount = await matchingService.expireMatchesForPrompt(id);
+      console.log('✅ Expired', expiredCount, 'matches for cancelled prompt:', id);
+    } catch (expireError) {
+      console.error('❌ Failed to expire matches for cancelled prompt:', expireError);
+      // Don't fail the request if match expiration fails
+    }
+
     res.json({ success: true });
   } catch (error) {
     console.error('Error cancelling deployed prompt:', error);
