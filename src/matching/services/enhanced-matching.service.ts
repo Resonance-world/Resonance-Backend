@@ -638,7 +638,8 @@ export class EnhancedMatchingService {
         orderBy: { createdAt: 'desc' }
       });
 
-      return matchResults.map(result => {
+      // Process matches and deduplicate by other user ID
+      const processedMatches = matchResults.map(result => {
         // Fix: Correctly determine the other user
         const isSessionOwner = result.session.userId === userId;
         const otherUser = isSessionOwner ? result.matchedUser : result.session.user;
@@ -652,6 +653,7 @@ export class EnhancedMatchingService {
         
         return {
           id: result.id,
+          otherUserId: otherUser.id, // Add this for deduplication
           question: result.session.prompt?.question || 'Unknown question',
           category: result.session.prompt?.theme?.name || 'Unknown theme',
           user: otherUser.name || otherUser.username || 'Anonymous',
@@ -670,6 +672,21 @@ export class EnhancedMatchingService {
           deployedAt: result.session.createdAt
         };
       }).filter(match => match !== null); // Remove any null matches (self-matches)
+
+      // Deduplicate matches by other user ID (keep the most recent one)
+      const uniqueMatches = new Map();
+      processedMatches.forEach(match => {
+        const existingMatch = uniqueMatches.get(match.otherUserId);
+        if (!existingMatch || new Date(match.deployedAt) > new Date(existingMatch.deployedAt)) {
+          uniqueMatches.set(match.otherUserId, match);
+        }
+      });
+
+      // Remove the otherUserId field before returning
+      return Array.from(uniqueMatches.values()).map(match => {
+        const { otherUserId, ...matchWithoutOtherUserId } = match;
+        return matchWithoutOtherUserId;
+      });
     } catch (error) {
       console.error('❌ Error getting user matches:', error);
       throw error;
