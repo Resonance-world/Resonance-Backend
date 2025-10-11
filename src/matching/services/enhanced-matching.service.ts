@@ -188,7 +188,7 @@ export class EnhancedMatchingService {
 
       console.log('🔍 New matches to create:', newMatches.length);
 
-      // Create match results for new matches
+      // Create match results for new matches (bidirectional)
       const matchResults = [];
       for (const match of newMatches) {
         const compatibilityScore = this.calculateCompatibilityScore(userPrompt, match);
@@ -196,37 +196,86 @@ export class EnhancedMatchingService {
         // Set expiration to 3 days from now (matches expire after 3 days)
         const expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
         
-        const matchResult = await prisma.matchResult.create({
-          data: {
-            sessionId: matchingSession.id, // Using the matching session ID
-            matchedUserId: match.userId,
-            compatibilityScore,
-            themeMatch: userPrompt.themeId === match.themeId,
-            questionMatch: userPrompt.question === match.question,
-            personalityMatch: false, // TODO: Implement personality matching
-            locationMatch: false, // TODO: Implement location matching
-            status: MatchStatus.PENDING,
-            expiresAt: expiresAt
-          },
-          include: {
-            matchedUser: {
-              select: {
-                id: true,
-                name: true,
-                username: true,
-                profilePictureUrl: true,
-                personalitySummary: true
+        // Create bidirectional matches using a transaction to ensure consistency
+        const [matchResultA, matchResultB] = await prisma.$transaction(async (tx) => {
+          // Match from User A to User B
+          const matchResultA = await tx.matchResult.create({
+            data: {
+              sessionId: matchingSession.id,
+              matchedUserId: match.userId,
+              compatibilityScore,
+              themeMatch: userPrompt.themeId === match.themeId,
+              questionMatch: userPrompt.question === match.question,
+              personalityMatch: false, // TODO: Implement personality matching
+              locationMatch: false, // TODO: Implement location matching
+              status: MatchStatus.PENDING,
+              expiresAt: expiresAt
+            },
+            include: {
+              matchedUser: {
+                select: {
+                  id: true,
+                  name: true,
+                  username: true,
+                  profilePictureUrl: true,
+                  personalitySummary: true
+                }
               }
             }
+          });
+
+          // Find or create a matching session for User B
+          let userBSession = await tx.matchingSession.findFirst({
+            where: {
+              userId: match.userId,
+              promptId: match.promptId
+            }
+          });
+
+          if (!userBSession) {
+            userBSession = await tx.matchingSession.create({
+              data: {
+                userId: match.userId,
+                promptId: match.promptId
+              }
+            });
           }
+
+          // Match from User B to User A
+          const matchResultB = await tx.matchResult.create({
+            data: {
+              sessionId: userBSession.id,
+              matchedUserId: userId,
+              compatibilityScore,
+              themeMatch: userPrompt.themeId === match.themeId,
+              questionMatch: userPrompt.question === match.question,
+              personalityMatch: false, // TODO: Implement personality matching
+              locationMatch: false, // TODO: Implement location matching
+              status: MatchStatus.PENDING,
+              expiresAt: expiresAt
+            },
+            include: {
+              matchedUser: {
+                select: {
+                  id: true,
+                  name: true,
+                  username: true,
+                  profilePictureUrl: true,
+                  personalitySummary: true
+                }
+              }
+            }
+          });
+
+          return [matchResultA, matchResultB];
         });
         
-            matchResults.push(matchResult);
-            console.log('✅ Created match result:', matchResult.id, 'for user:', match.userId);
+        matchResults.push(matchResultA);
+        console.log('✅ Created bidirectional match results:', matchResultA.id, 'and', matchResultB.id, 'between users:', userId, 'and', match.userId);
             
             // Emit WebSocket event for new match with complete data
             const matchData = {
-              id: matchResult.id,
+              id: matchResultA.id,
               question: userPrompt.question,
               category: userPrompt.theme.name,
               user: userPrompt.user.name || userPrompt.user.username || 'Anonymous',
@@ -237,25 +286,25 @@ export class EnhancedMatchingService {
                 profilePictureUrl: userPrompt.user.profilePictureUrl,
                 personalitySummary: userPrompt.user.personalitySummary
               },
-              status: matchResult.status,
-              userAccepted: matchResult.user1_accepted,
-              otherUserAccepted: matchResult.user2_accepted,
+              status: matchResultA.status,
+              userAccepted: matchResultA.user1_accepted,
+              otherUserAccepted: matchResultA.user2_accepted,
               relationshipId: undefined,
-              compatibilityScore: matchResult.compatibilityScore,
+              compatibilityScore: matchResultA.compatibilityScore,
               deployedAt: userPrompt.createdAt
             };
             
             // Send WebSocket event to both users involved in the match
             matchSocketService.sendNewMatchAvailable(match.userId, { 
               userId: match.userId, 
-              matchId: matchResult.id,
+              matchId: matchResultA.id,
               matchData: matchData
             });
             
             // Also send to the original user who deployed the prompt
             matchSocketService.sendNewMatchAvailable(userId, { 
               userId: userId, 
-              matchId: matchResult.id,
+              matchId: matchResultA.id,
               matchData: {
                 ...matchData,
                 user: userPrompt.user.name || userPrompt.user.username || 'Anonymous',
