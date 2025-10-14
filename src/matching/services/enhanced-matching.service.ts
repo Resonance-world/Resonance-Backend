@@ -723,6 +723,59 @@ export class EnhancedMatchingService {
           console.log('🧹 Expired match with inactive user:', match.id, 'User1 active:', user1.isActive, 'User2 active:', user2.isActive);
         }
       }
+
+      // 4. Handle match status inconsistencies (one accepts, other declines)
+      const inconsistentMatches = await prisma.matchResult.findMany({
+        where: {
+          status: MatchStatus.PENDING,
+          OR: [
+            // User1 accepted but user2 declined
+            {
+              user1_accepted: true,
+              user2_accepted: false
+            },
+            // User2 accepted but user1 declined  
+            {
+              user1_accepted: false,
+              user2_accepted: true
+            }
+          ]
+        }
+      });
+
+      // Check if any of these matches have been declined by either user
+      for (const match of inconsistentMatches) {
+        // Check if either user has declined this match in their history
+        const declinedHistory = await prisma.userMatchHistory.findFirst({
+          where: {
+            OR: [
+              {
+                userId: match.session.userId,
+                matchedUserId: match.matchedUserId,
+                matchType: 'DECLINED'
+              },
+              {
+                userId: match.matchedUserId,
+                matchedUserId: match.session.userId,
+                matchType: 'DECLINED'
+              }
+            ]
+          }
+        });
+
+        if (declinedHistory) {
+          // One user declined, expire the match
+          await prisma.matchResult.update({
+            where: { id: match.id },
+            data: { 
+              status: MatchStatus.EXPIRED,
+              expiresAt: new Date()
+            }
+          });
+          totalExpired++;
+          console.log('🧹 Expired inconsistent match (one accepted, other declined):', match.id);
+        }
+      }
       
       console.log('🧹 Total cleaned up expired matches:', totalExpired);
       return totalExpired;
