@@ -617,7 +617,10 @@ export class EnhancedMatchingService {
    */
   async cleanupExpiredMatches(): Promise<number> {
     try {
-      const result = await prisma.matchResult.updateMany({
+      let totalExpired = 0;
+
+      // 1. Expire matches that have passed their expiration date
+      const expiredByDate = await prisma.matchResult.updateMany({
         where: {
           expiresAt: {
             lt: new Date()
@@ -629,8 +632,62 @@ export class EnhancedMatchingService {
         }
       });
       
-      console.log('🧹 Cleaned up expired matches:', result.count);
-      return result.count;
+      totalExpired += expiredByDate.count;
+      console.log('🧹 Cleaned up matches expired by date:', expiredByDate.count);
+
+      // 2. Expire confirmed matches with no conversation after 3 days
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 7);
+
+      // Find confirmed matches that are older than 3 days
+      const confirmedMatches = await prisma.matchResult.findMany({
+        where: {
+          status: MatchStatus.CONFIRMED,
+          createdAt: {
+            lt: threeDaysAgo
+          }
+        },
+        include: {
+          session: {
+            include: {
+              user: true
+            }
+          },
+          matchedUser: true
+        }
+      });
+
+      // Check each confirmed match for conversation activity
+      for (const match of confirmedMatches) {
+        const user1Id = match.session.userId;
+        const user2Id = match.matchedUserId;
+
+        // Check if there are any messages between these users
+        const messageCount = await prisma.message.count({
+          where: {
+            OR: [
+              { senderId: user1Id, receiverId: user2Id },
+              { senderId: user2Id, receiverId: user1Id }
+            ]
+          }
+        });
+
+        // If no messages, expire the match
+        if (messageCount === 0) {
+          await prisma.matchResult.update({
+            where: { id: match.id },
+            data: { 
+              status: MatchStatus.EXPIRED,
+              expiresAt: new Date()
+            }
+          });
+          totalExpired++;
+          console.log('🧹 Expired confirmed match with no conversation:', match.id);
+        }
+      }
+      
+      console.log('🧹 Total cleaned up expired matches:', totalExpired);
+      return totalExpired;
     } catch (error) {
       console.error('❌ Error cleaning up expired matches:', error);
       throw error;
