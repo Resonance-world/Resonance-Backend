@@ -883,8 +883,29 @@ export class EnhancedMatchingService {
         }
       });
 
+      // Filter out matches where conversation has already started
+      const matchesWithoutConversations = [];
+      for (const match of uniqueMatches.values()) {
+        // Check if there are any messages between these users
+        const messageCount = await prisma.message.count({
+          where: {
+            OR: [
+              { senderId: userId, receiverId: match.otherUserId },
+              { senderId: match.otherUserId, receiverId: userId }
+            ]
+          }
+        });
+
+        // Only include matches with no conversation
+        if (messageCount === 0) {
+          matchesWithoutConversations.push(match);
+        } else {
+          console.log('🔇 Hiding match with existing conversation:', match.id, 'Messages:', messageCount);
+        }
+      }
+
       // Remove the otherUserId field before returning
-      return Array.from(uniqueMatches.values()).map(match => {
+      return matchesWithoutConversations.map(match => {
         const { otherUserId, ...matchWithoutOtherUserId } = match;
         return matchWithoutOtherUserId;
       });
