@@ -186,11 +186,14 @@ export class EnhancedMatchingService {
       // Filter out already matched users and previously declined users
       const newMatches = potentialMatches.filter(m => !allExcludedUserIds.has(m.userId));
 
-      console.log('🔍 New matches to create:', newMatches.length);
+      // Limit to maximum 5 matches per prompt
+      const limitedMatches = newMatches.slice(0, 5);
+
+      console.log('🔍 New matches to create:', limitedMatches.length, '(limited to 5 per prompt)');
 
       // Create match results for new matches (bidirectional)
       const matchResults = [];
-      for (const match of newMatches) {
+      for (const match of limitedMatches) {
         const compatibilityScore = this.calculateCompatibilityScore(userPrompt, match);
         
         // Set expiration to 3 days from now (matches expire after 3 days)
