@@ -858,10 +858,13 @@ export class EnhancedMatchingService {
         throw new Error('Match not found');
       }
 
-      // Update match status to declined
+      // Update match status to expired (moved from declined to expired)
       await prisma.matchResult.update({
         where: { id: matchId },
-        data: { status: MatchStatus.DECLINED }
+        data: { 
+          status: MatchStatus.EXPIRED,
+          expiresAt: new Date() // Set expiration time to now
+        }
       });
 
       // Record match history (use upsert to handle duplicates)
@@ -887,14 +890,14 @@ export class EnhancedMatchingService {
         // Continue with the decline process even if history recording fails
       }
 
-      // Emit WebSocket event for match decline to both users
+      // Emit WebSocket event for match expiration to both users
       const statusData = {
         matchId, 
-        status: 'DECLINED', 
+        status: 'EXPIRED', 
         userId: userId 
       };
       
-      console.log('🔔 Sending decline WebSocket events for match:', matchId);
+      console.log('🔔 Sending expiration WebSocket events for declined match:', matchId);
       console.log('🔔 User who declined:', userId);
       console.log('🔔 Session user:', match.session?.userId);
       console.log('🔔 Matched user:', match.matchedUserId);
