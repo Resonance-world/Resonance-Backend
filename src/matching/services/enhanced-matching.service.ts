@@ -688,6 +688,41 @@ export class EnhancedMatchingService {
           console.log('🧹 Expired confirmed match with no conversation:', match.id);
         }
       }
+
+      // 3. Expire matches with inactive users
+      const inactiveUserMatches = await prisma.matchResult.findMany({
+        where: {
+          status: {
+            in: [MatchStatus.PENDING, MatchStatus.CONFIRMED]
+          }
+        },
+        include: {
+          session: {
+            include: {
+              user: true
+            }
+          },
+          matchedUser: true
+        }
+      });
+
+      for (const match of inactiveUserMatches) {
+        const user1 = match.session.user;
+        const user2 = match.matchedUser;
+
+        // Check if either user is inactive
+        if (!user1.isActive || !user2.isActive) {
+          await prisma.matchResult.update({
+            where: { id: match.id },
+            data: { 
+              status: MatchStatus.EXPIRED,
+              expiresAt: new Date()
+            }
+          });
+          totalExpired++;
+          console.log('🧹 Expired match with inactive user:', match.id, 'User1 active:', user1.isActive, 'User2 active:', user2.isActive);
+        }
+      }
       
       console.log('🧹 Total cleaned up expired matches:', totalExpired);
       return totalExpired;
