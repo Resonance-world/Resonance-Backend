@@ -792,6 +792,28 @@ export class EnhancedMatchingService {
     try {
       console.log('🔍 Getting expired matches for user:', userId);
 
+      // First, run cleanup to ensure expired matches are properly marked
+      await this.cleanupExpiredMatches();
+
+      // Debug: Check all matches for this user
+      const allMatches = await prisma.matchResult.findMany({
+        where: {
+          OR: [
+            { session: { userId: userId } },
+            { matchedUserId: userId }
+          ]
+        },
+        select: {
+          id: true,
+          status: true,
+          expiresAt: true,
+          createdAt: true,
+          user1_accepted: true,
+          user2_accepted: true
+        }
+      });
+      console.log('🔍 All matches for user:', userId, 'Count:', allMatches.length, allMatches);
+
       // Get expired match results
       const matchResults = await prisma.matchResult.findMany({
         where: {

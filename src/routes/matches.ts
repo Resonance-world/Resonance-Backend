@@ -37,7 +37,12 @@ router.get('/', sessionAuthMiddleware, async (req: AuthenticatedRequest, res: Re
 // Get user's expired matches
 router.get('/expired', sessionAuthMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = req.user?.id;
+    // Get userId from session middleware (req.userId is set by sessionAuthMiddleware)
+    const userId = (req as any).userId || req.query.userId as string;
+    
+    console.log('🔍 Expired matches request - userId:', userId);
+    console.log('🔍 Expired matches request - req.userId:', (req as any).userId);
+    console.log('🔍 Expired matches request - req.user:', (req as any).user);
     
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -46,6 +51,7 @@ router.get('/expired', sessionAuthMiddleware, async (req: AuthenticatedRequest, 
     // Get user's expired matches using enhanced matching service
     const expiredMatches = await enhancedMatchingService.getUserExpiredMatches(userId);
     
+    console.log('🔍 Found expired matches:', expiredMatches.length, expiredMatches);
     res.json(expiredMatches);
   } catch (error) {
     console.error('Error fetching expired matches:', error);
