@@ -153,6 +153,41 @@ router.post('/', sessionAuthMiddleware, async (req: AuthenticatedRequest, res) =
       }
     }
 
+    // Also expire any existing active prompts when user deploys a new one (user changed prompt)
+    const existingActivePrompts = await prisma.deployedPrompt.findMany({
+      where: {
+        userId,
+        status: 'ACTIVE'
+      }
+    });
+
+    if (existingActivePrompts.length > 0) {
+      // Update existing active prompts to expired status (user changed prompt)
+      await prisma.deployedPrompt.updateMany({
+        where: {
+          userId,
+          status: 'ACTIVE'
+        },
+        data: {
+          status: 'EXPIRED'
+        }
+      });
+
+      // Expire matches for all existing active prompts
+      const { EnhancedMatchingService } = await import('../matching/services/enhanced-matching.service.js');
+      const matchingService = new EnhancedMatchingService();
+      
+      for (const existingPrompt of existingActivePrompts) {
+        try {
+          const expiredCount = await matchingService.expireMatchesForPrompt(existingPrompt.id);
+          console.log('✅ Expired', expiredCount, 'matches for replaced prompt:', existingPrompt.id);
+        } catch (expireError) {
+          console.error('❌ Failed to expire matches for replaced prompt:', expireError);
+          // Don't fail the request if match expiration fails
+        }
+      }
+    }
+
     // Check if user has an active deployed prompt (after expiring old ones)
     const activePrompt = await prisma.deployedPrompt.findFirst({
       where: {
