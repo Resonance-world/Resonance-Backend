@@ -18,7 +18,7 @@ interface AuthenticatedRequest extends Request {
 // Get user's matches with status
 router.get('/', sessionAuthMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = (req as any).userId;
     
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -37,12 +37,7 @@ router.get('/', sessionAuthMiddleware, async (req: AuthenticatedRequest, res: Re
 // Get user's expired matches
 router.get('/expired', sessionAuthMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    // Get userId from session middleware (req.userId is set by sessionAuthMiddleware)
-    const userId = (req as any).userId || req.query.userId as string;
-    
-    console.log('🔍 Expired matches request - userId:', userId);
-    console.log('🔍 Expired matches request - req.userId:', (req as any).userId);
-    console.log('🔍 Expired matches request - req.user:', (req as any).user);
+    const userId = (req as any).userId;
     
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -51,13 +46,13 @@ router.get('/expired', sessionAuthMiddleware, async (req: AuthenticatedRequest, 
     // Get user's expired matches using enhanced matching service
     const expiredMatches = await enhancedMatchingService.getUserExpiredMatches(userId);
     
-    console.log('🔍 Found expired matches:', expiredMatches.length, expiredMatches);
     res.json(expiredMatches);
   } catch (error) {
     console.error('Error fetching expired matches:', error);
     res.status(500).json({ error: 'Failed to fetch expired matches' });
   }
 });
+
 
 // Get matched users (users who both have accepted the match)
 router.get('/matched-users', sessionAuthMiddleware, async (req: AuthenticatedRequest, res: Response) => {
@@ -151,82 +146,6 @@ router.get('/matched-users', sessionAuthMiddleware, async (req: AuthenticatedReq
   } catch (error) {
     console.error('❌ Error fetching matched users:', error);
     res.status(500).json({ error: 'Failed to fetch matched users' });
-  }
-});
-
-// Test endpoint to check if route is working
-router.get('/test', (req, res) => {
-  res.json({ success: true, message: 'Matches route is working' });
-});
-
-// Get conversation prompt for a specific user pair (temporarily without auth for testing)
-router.get('/conversation-prompt/:userId/:otherUserId', async (req, res) => {
-  try {
-    console.log('🔍 Conversation prompt endpoint hit!');
-    console.log('🔍 Request params:', req.params);
-    console.log('🔍 Request query:', req.query);
-    
-    const { userId, otherUserId } = req.params;
-    
-    console.log('🔍 User ID from params:', userId);
-    console.log('🔍 Other user ID from params:', otherUserId);
-
-    console.log('🔍 Getting conversation prompt for users:', userId, 'and', otherUserId);
-
-    // Find the match between these two users
-    const match = await prisma.matchResult.findFirst({
-      where: {
-        OR: [
-          { 
-            session: { userId: userId },
-            matchedUserId: otherUserId
-          },
-          { 
-            session: { userId: otherUserId },
-            matchedUserId: userId
-          }
-        ],
-        status: 'CONFIRMED'
-      },
-      include: {
-        session: {
-          include: {
-            prompt: {
-              include: {
-                theme: true
-              }
-            }
-          }
-        }
-      }
-    });
-
-    if (!match) {
-      return res.status(404).json({ 
-        success: false,
-        error: 'No confirmed match found between these users' 
-      });
-    }
-
-    const prompt = match.session.prompt;
-    if (!prompt) {
-      return res.status(404).json({ 
-        success: false,
-        error: 'Prompt not found for this match' 
-      });
-    }
-
-    res.json({
-      success: true,
-      prompt: {
-        question: prompt.question,
-        theme: prompt.theme?.name || 'General',
-        themeId: prompt.themeId
-      }
-    });
-  } catch (error) {
-    console.error('❌ Error getting conversation prompt:', error);
-    res.status(500).json({ error: 'Failed to get conversation prompt' });
   }
 });
 

@@ -35,7 +35,8 @@ export class EnhancedMatchingService {
    */
   async findMatches(userId: string, deployedPromptId: string): Promise<UserMatch[]> {
     try {
-      // Don't run cleanup during match finding to avoid interference with instant manifestation
+      // Clean up expired matches first
+      await this.cleanupExpiredMatches();
       
       // Get user's deployed prompt
       const userPrompt = await prisma.deployedPrompt.findUnique({
@@ -185,14 +186,11 @@ export class EnhancedMatchingService {
       // Filter out already matched users and previously declined users
       const newMatches = potentialMatches.filter(m => !allExcludedUserIds.has(m.userId));
 
-      // Limit to maximum 5 matches per prompt
-      const limitedMatches = newMatches.slice(0, 5);
-
-      console.log('🔍 New matches to create:', limitedMatches.length, '(limited to 5 per prompt)');
+      console.log('🔍 New matches to create:', newMatches.length);
 
       // Create match results for new matches (bidirectional)
       const matchResults = [];
-      for (const match of limitedMatches) {
+      for (const match of newMatches) {
         const compatibilityScore = this.calculateCompatibilityScore(userPrompt, match);
         
         // Set expiration to 3 days from now (matches expire after 3 days)
@@ -619,10 +617,7 @@ export class EnhancedMatchingService {
    */
   async cleanupExpiredMatches(): Promise<number> {
     try {
-      let totalExpired = 0;
-
-      // 1. Expire matches that have passed their expiration date
-      const expiredByDate = await prisma.matchResult.updateMany({
+      const result = await prisma.matchResult.updateMany({
         where: {
           expiresAt: {
             lt: new Date()
@@ -634,150 +629,8 @@ export class EnhancedMatchingService {
         }
       });
       
-      totalExpired += expiredByDate.count;
-      console.log('🧹 Cleaned up matches expired by date:', expiredByDate.count);
-
-      // 2. Expire confirmed matches with no conversation after 3 days
-      const threeDaysAgo = new Date();
-      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-
-      // Find confirmed matches that are older than 3 days
-      const confirmedMatches = await prisma.matchResult.findMany({
-        where: {
-          status: MatchStatus.CONFIRMED,
-          createdAt: {
-            lt: threeDaysAgo
-          }
-        },
-        include: {
-          session: {
-            include: {
-              user: true
-            }
-          },
-          matchedUser: true
-        }
-      });
-
-      // Check each confirmed match for conversation activity
-      for (const match of confirmedMatches) {
-        const user1Id = match.session.userId;
-        const user2Id = match.matchedUserId;
-
-        // Check if there are any messages between these users
-        const messageCount = await prisma.message.count({
-          where: {
-            OR: [
-              { senderId: user1Id, receiverId: user2Id },
-              { senderId: user2Id, receiverId: user1Id }
-            ]
-          }
-        });
-
-        // If no messages, expire the match
-        if (messageCount === 0) {
-          await prisma.matchResult.update({
-            where: { id: match.id },
-            data: { 
-              status: MatchStatus.EXPIRED,
-              expiresAt: new Date()
-            }
-          });
-          totalExpired++;
-          console.log('🧹 Expired confirmed match with no conversation:', match.id);
-        }
-      }
-
-      // 3. Expire matches with inactive users
-      const inactiveUserMatches = await prisma.matchResult.findMany({
-        where: {
-          status: {
-            in: [MatchStatus.PENDING, MatchStatus.CONFIRMED]
-          }
-        },
-        include: {
-          session: {
-            include: {
-              user: true
-            }
-          },
-          matchedUser: true
-        }
-      });
-
-      for (const match of inactiveUserMatches) {
-        const user1 = match.session.user;
-        const user2 = match.matchedUser;
-
-        // Check if either user is inactive
-        if (!user1.isActive || !user2.isActive) {
-          await prisma.matchResult.update({
-            where: { id: match.id },
-            data: { 
-              status: MatchStatus.EXPIRED,
-              expiresAt: new Date()
-            }
-          });
-          totalExpired++;
-          console.log('🧹 Expired match with inactive user:', match.id, 'User1 active:', user1.isActive, 'User2 active:', user2.isActive);
-        }
-      }
-
-      // 4. Handle match status inconsistencies (one accepts, other declines)
-      const inconsistentMatches = await prisma.matchResult.findMany({
-        where: {
-          status: MatchStatus.PENDING,
-          OR: [
-            // User1 accepted but user2 declined
-            {
-              user1_accepted: true,
-              user2_accepted: false
-            },
-            // User2 accepted but user1 declined  
-            {
-              user1_accepted: false,
-              user2_accepted: true
-            }
-          ]
-        }
-      });
-
-      // Check if any of these matches have been declined by either user
-      for (const match of inconsistentMatches) {
-        // Check if either user has declined this match in their history
-        const declinedHistory = await prisma.userMatchHistory.findFirst({
-          where: {
-            OR: [
-              {
-                userId: match.session.userId,
-                matchedUserId: match.matchedUserId,
-                matchType: 'DECLINED'
-              },
-              {
-                userId: match.matchedUserId,
-                matchedUserId: match.session.userId,
-                matchType: 'DECLINED'
-              }
-            ]
-          }
-        });
-
-        if (declinedHistory) {
-          // One user declined, expire the match
-          await prisma.matchResult.update({
-            where: { id: match.id },
-            data: { 
-              status: MatchStatus.EXPIRED,
-              expiresAt: new Date()
-            }
-          });
-          totalExpired++;
-          console.log('🧹 Expired inconsistent match (one accepted, other declined):', match.id);
-        }
-      }
-      
-      console.log('🧹 Total cleaned up expired matches:', totalExpired);
-      return totalExpired;
+      console.log('🧹 Cleaned up expired matches:', result.count);
+      return result.count;
     } catch (error) {
       console.error('❌ Error cleaning up expired matches:', error);
       throw error;
@@ -790,28 +643,6 @@ export class EnhancedMatchingService {
   async getUserExpiredMatches(userId: string): Promise<UserMatch[]> {
     try {
       console.log('🔍 Getting expired matches for user:', userId);
-
-      // First, run cleanup to ensure expired matches are properly marked
-      await this.cleanupExpiredMatches();
-
-      // Debug: Check all matches for this user
-      const allMatches = await prisma.matchResult.findMany({
-        where: {
-          OR: [
-            { session: { userId: userId } },
-            { matchedUserId: userId }
-          ]
-        },
-        select: {
-          id: true,
-          status: true,
-          expiresAt: true,
-          createdAt: true,
-          user1_accepted: true,
-          user2_accepted: true
-        }
-      });
-      console.log('🔍 All matches for user:', userId, 'Count:', allMatches.length, allMatches);
 
       // Get expired match results
       const matchResults = await prisma.matchResult.findMany({
@@ -995,36 +826,8 @@ export class EnhancedMatchingService {
         }
       });
 
-      // Filter out CONFIRMED matches where conversation has already started
-      // PENDING matches should always be visible for instant manifestation
-      const matchesWithoutConversations = [];
-      for (const match of uniqueMatches.values()) {
-        // Only hide CONFIRMED matches that have conversations
-        if (match.status === 'CONFIRMED') {
-          // Check if there are any messages between these users
-          const messageCount = await prisma.message.count({
-            where: {
-              OR: [
-                { senderId: userId, receiverId: match.otherUserId },
-                { senderId: match.otherUserId, receiverId: userId }
-              ]
-            }
-          });
-
-          // Only hide CONFIRMED matches with conversations
-          if (messageCount === 0) {
-            matchesWithoutConversations.push(match);
-          } else {
-            console.log('🔇 Hiding CONFIRMED match with existing conversation:', match.id, 'Messages:', messageCount);
-          }
-        } else {
-          // Always show PENDING matches for instant manifestation
-          matchesWithoutConversations.push(match);
-        }
-      }
-
       // Remove the otherUserId field before returning
-      return matchesWithoutConversations.map(match => {
+      return Array.from(uniqueMatches.values()).map(match => {
         const { otherUserId, ...matchWithoutOtherUserId } = match;
         return matchWithoutOtherUserId;
       });
@@ -1055,13 +858,10 @@ export class EnhancedMatchingService {
         throw new Error('Match not found');
       }
 
-      // Update match status to expired (moved from declined to expired)
+      // Update match status to declined
       await prisma.matchResult.update({
         where: { id: matchId },
-        data: { 
-          status: MatchStatus.EXPIRED,
-          expiresAt: new Date() // Set expiration time to now
-        }
+        data: { status: MatchStatus.DECLINED }
       });
 
       // Record match history (use upsert to handle duplicates)
@@ -1087,14 +887,14 @@ export class EnhancedMatchingService {
         // Continue with the decline process even if history recording fails
       }
 
-      // Emit WebSocket event for match expiration to both users
+      // Emit WebSocket event for match decline to both users
       const statusData = {
         matchId, 
-        status: 'EXPIRED', 
+        status: 'DECLINED', 
         userId: userId 
       };
       
-      console.log('🔔 Sending expiration WebSocket events for declined match:', matchId);
+      console.log('🔔 Sending decline WebSocket events for match:', matchId);
       console.log('🔔 User who declined:', userId);
       console.log('🔔 Session user:', match.session?.userId);
       console.log('🔔 Matched user:', match.matchedUserId);
