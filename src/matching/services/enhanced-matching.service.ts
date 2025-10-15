@@ -35,8 +35,7 @@ export class EnhancedMatchingService {
    */
   async findMatches(userId: string, deployedPromptId: string): Promise<UserMatch[]> {
     try {
-      // Clean up expired matches first
-      await this.cleanupExpiredMatches();
+      // Don't run cleanup during match finding to avoid interference with instant manifestation
       
       // Get user's deployed prompt
       const userPrompt = await prisma.deployedPrompt.findUnique({
@@ -640,7 +639,7 @@ export class EnhancedMatchingService {
 
       // 2. Expire confirmed matches with no conversation after 3 days
       const threeDaysAgo = new Date();
-      threeDaysAgo.setDate(threeDaysAgo.getDate() - 7);
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
       // Find confirmed matches that are older than 3 days
       const confirmedMatches = await prisma.matchResult.findMany({
@@ -996,24 +995,31 @@ export class EnhancedMatchingService {
         }
       });
 
-      // Filter out matches where conversation has already started
+      // Filter out CONFIRMED matches where conversation has already started
+      // PENDING matches should always be visible for instant manifestation
       const matchesWithoutConversations = [];
       for (const match of uniqueMatches.values()) {
-        // Check if there are any messages between these users
-        const messageCount = await prisma.message.count({
-          where: {
-            OR: [
-              { senderId: userId, receiverId: match.otherUserId },
-              { senderId: match.otherUserId, receiverId: userId }
-            ]
-          }
-        });
+        // Only hide CONFIRMED matches that have conversations
+        if (match.status === 'CONFIRMED') {
+          // Check if there are any messages between these users
+          const messageCount = await prisma.message.count({
+            where: {
+              OR: [
+                { senderId: userId, receiverId: match.otherUserId },
+                { senderId: match.otherUserId, receiverId: userId }
+              ]
+            }
+          });
 
-        // Only include matches with no conversation
-        if (messageCount === 0) {
-          matchesWithoutConversations.push(match);
+          // Only hide CONFIRMED matches with conversations
+          if (messageCount === 0) {
+            matchesWithoutConversations.push(match);
+          } else {
+            console.log('🔇 Hiding CONFIRMED match with existing conversation:', match.id, 'Messages:', messageCount);
+          }
         } else {
-          console.log('🔇 Hiding match with existing conversation:', match.id, 'Messages:', messageCount);
+          // Always show PENDING matches for instant manifestation
+          matchesWithoutConversations.push(match);
         }
       }
 
