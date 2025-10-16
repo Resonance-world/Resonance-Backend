@@ -1,0 +1,35 @@
+{
+  "name": "@resonance/contracts",
+  "version": "1.0.0",
+  "description": "Smart contracts for Resonance tokenization system",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:coverage": "hardhat coverage",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network worldChainSepolia",
+    "deploy:mainnet": "hardhat run scripts/deploy.js --network worldChain",
+    "deploy:localhost": "hardhat run scripts/deploy.js --network localhost",
+    "node": "hardhat node",
+    "clean": "hardhat clean"
+  },
+  "keywords": [
+    "ethereum",
+    "smart-contracts",
+    "solidity",
+    "erc20",
+    "world-chain"
+  ],
+  "author": "Resonance Team",
+  "license": "MIT",
+  "packageManager": "pnpm@10.10.0",
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.4.0",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "ethers": "^6.15.0",
+    "hardhat": "^2.26.3"
+  }
+}
