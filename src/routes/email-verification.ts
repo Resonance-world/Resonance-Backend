@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { sessionAuthMiddleware } from '../middleware/sessionAuth.js';
 import { prisma } from '../lib/prisma.js';
 import { Resend } from 'resend';
+import { tokenService } from '../services/blockchain/token.service.js';
 
 const router: Router = Router();
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -226,6 +227,19 @@ router.post('/verify-code', sessionAuthMiddleware, async (req: AuthenticatedRequ
       data: { verified: true }
     });
 
+    // Get user's wallet address
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { walletAddress: true }
+    });
+
+    if (!user || !user.walletAddress) {
+      return res.status(400).json({
+        success: false,
+        error: 'User wallet address not found'
+      });
+    }
+
     // Update user email and verification status
     await prisma.user.update({
       where: { id: userId },
@@ -239,6 +253,14 @@ router.post('/verify-code', sessionAuthMiddleware, async (req: AuthenticatedRequ
     // Award 10 RES tokens for email verification
     const rewardAmount = 10;
     
+    // Mint tokens on-chain
+    const mintResult = await tokenService.mintTokens(
+      user.walletAddress,
+      rewardAmount,
+      'Email verification reward'
+    );
+
+    // Update database records
     await prisma.$transaction([
       // Add to user balance
       prisma.user.update({
@@ -256,7 +278,8 @@ router.post('/verify-code', sessionAuthMiddleware, async (req: AuthenticatedRequ
           amount: rewardAmount,
           type: 'EMAIL_VERIFICATION',
           description: 'Email verification reward',
-          status: 'completed'
+          status: mintResult.success ? 'completed' : 'pending',
+          transactionHash: mintResult.txHash
         }
       })
     ]);
@@ -267,7 +290,9 @@ router.post('/verify-code', sessionAuthMiddleware, async (req: AuthenticatedRequ
       reward: {
         amount: rewardAmount,
         token: 'RES'
-      }
+      },
+      onChain: mintResult.success,
+      txHash: mintResult.txHash
     });
   } catch (error) {
     console.error('❌ Error in verify-code:', error);

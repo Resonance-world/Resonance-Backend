@@ -11,6 +11,9 @@ import https from 'https';
 import { socketService } from './messages/services/socket-service-singleton.js';
 import { matchSocketService } from './matching/services/match-socket-service-singleton.js';
 
+// Import blockchain services
+import { tokenService } from './services/blockchain/token.service.js';
+
 // Import routes
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/user.js';
@@ -165,6 +168,9 @@ app.use(errorHandler);
 app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
+
+// Initialize blockchain services
+tokenService.initialize();
 
 server.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
