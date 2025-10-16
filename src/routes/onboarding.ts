@@ -141,15 +141,23 @@ router.post('/save', async (req, res) => {
       // Calculate age
       const today = new Date();
       const birthDate = new Date(date_of_birth);
-      let calculatedAge = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
       
-      // Check if birthday hasn't occurred this year
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        calculatedAge--;
+      // Ensure the date is valid
+      if (isNaN(birthDate.getTime())) {
+        console.error('❌ Invalid date format:', date_of_birth);
+        age = null;
+      } else {
+        let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        // Check if birthday hasn't occurred this year
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          calculatedAge--;
+        }
+        
+        // Ensure age is not negative
+        age = Math.max(0, calculatedAge);
       }
-      
-      age = calculatedAge;
     }
 
     // Check if user exists first
