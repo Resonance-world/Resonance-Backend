@@ -51,6 +51,10 @@ model User {
   age                       Int?
   privateProfilePictureUrl  String?
   userWhy                   String?
+  email                     String?            @unique
+  emailVerified             Boolean            @default(false)
+  emailVerifiedAt           DateTime?
+  resTokenBalance           Decimal            @default(0) @db.Decimal(18, 8)
   chatbotSessions           ChatbotSession[]
   deployedPrompts           DeployedPrompt[]
   matchResults              MatchResult[]
@@ -61,6 +65,8 @@ model User {
   relatingRelations         Relationship[]     @relation("relatingUser")
   matchedUserHistory        UserMatchHistory[] @relation("MatchedUserHistory")
   userMatchHistory          UserMatchHistory[] @relation("UserMatchHistory")
+  emailVerificationCodes    EmailVerificationCode[]
+  tokenTransactions         TokenTransaction[]
 
   @@index([isActive])
   @@index([onboardingCompleted])
@@ -276,4 +282,47 @@ enum MatchStatus {
   CONFIRMED
   DECLINED
   EXPIRED
+}
+
+enum TokenTransactionType {
+  EMAIL_VERIFICATION
+  REFERRAL_BONUS
+  DAILY_REWARD
+  MATCH_BONUS
+  PURCHASE
+  TRANSFER_IN
+  TRANSFER_OUT
+}
+
+model EmailVerificationCode {
+  id        String   @id @default(cuid())
+  userId    String
+  email     String
+  code      String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([email])
+  @@index([code])
+  @@map("email_verification_codes")
+}
+
+model TokenTransaction {
+  id              String                 @id @default(cuid())
+  userId          String
+  amount          Decimal                @db.Decimal(18, 8)
+  type            TokenTransactionType
+  description     String?
+  transactionHash String?                // Blockchain transaction hash
+  status          String                 @default("completed") // completed, pending, failed
+  createdAt       DateTime               @default(now())
+  user            User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([type])
+  @@map("token_transactions")
 }
