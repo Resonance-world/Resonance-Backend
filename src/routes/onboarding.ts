@@ -130,12 +130,26 @@ router.post('/save', async (req, res) => {
       }
     }
 
-    // Parse date of birth and calculate zodiac sign
+    // Parse date of birth and calculate zodiac sign and age
     let dateOfBirth = null;
     let zodiacSign = null;
+    let age = null;
     if (date_of_birth) {
       dateOfBirth = new Date(date_of_birth);
       zodiacSign = calculateZodiacSign(dateOfBirth);
+      
+      // Calculate age
+      const today = new Date();
+      const birthDate = new Date(date_of_birth);
+      let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      // Check if birthday hasn't occurred this year
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        calculatedAge--;
+      }
+      
+      age = calculatedAge;
     }
 
     // Check if user exists first
@@ -159,6 +173,7 @@ router.post('/save', async (req, res) => {
       data: {
         dateOfBirth,
         zodiacSign,
+        age,
         sex,
         locationCity,
         locationCountry,

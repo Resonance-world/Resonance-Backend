@@ -257,6 +257,7 @@ router.get('/:userId', async (req, res) => {
         currentAvailability: true,
         lastActiveAt: true,
         name: true,
+        age: true,
         zodiacSign: true,
         essenceKeywords: true,
         communicationTone: true,
