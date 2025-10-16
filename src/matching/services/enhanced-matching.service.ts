@@ -484,6 +484,22 @@ export class EnhancedMatchingService {
         // Continue with the confirm process even if history recording fails
       }
 
+      // Emit WebSocket events for match confirmation to both users
+      const confirmationData = {
+        matchId,
+        status: 'CONFIRMED',
+        relationshipId,
+        message: 'Match confirmed! You can now start chatting.'
+      };
+      
+      console.log('🔔 Sending confirmation WebSocket events for match:', matchId);
+      console.log('🔔 Session user:', match.session.userId);
+      console.log('🔔 Matched user:', match.matchedUserId);
+      
+      // Notify both users about the match confirmation
+      matchSocketService.sendMatchConfirmed(match.session.userId, confirmationData);
+      matchSocketService.sendMatchConfirmed(match.matchedUserId, confirmationData);
+
       return {
         success: true,
         matchStatus: MatchStatus.CONFIRMED,
