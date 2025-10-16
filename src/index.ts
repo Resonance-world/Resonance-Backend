@@ -21,6 +21,7 @@ import themesRoutes from './routes/themes.js';
 import deployedPromptsRoutes from './routes/deployedPrompts.js';
 import matchesRoutes from './routes/matches.js';
 import relationshipsRoutes from './routes/relationships.js';
+import emailVerificationRoutes from './routes/email-verification.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -152,6 +153,7 @@ app.use('/api/themes', themesRoutes);
 app.use('/api/deployed-prompts', deployedPromptsRoutes);
 app.use('/api/matches', matchesRoutes);
 app.use('/api/relationships', relationshipsRoutes);
+app.use('/api/email-verification', emailVerificationRoutes);
 
 // Socket.IO connection handling - Using MessagesGateway instead
 // The MessagesGateway handles all WebSocket connections and events
