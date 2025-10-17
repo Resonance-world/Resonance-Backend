@@ -104,7 +104,7 @@ router.post('/send-code', sessionAuthMiddleware, async (req: AuthenticatedReques
     try {
       console.log(`📧 Attempting to send verification email to: ${email}`);
       const emailResult = await resend.emails.send({
-        from: 'Resonance <noreply@resonance.world>',
+        from: 'Resonance <noreply@resonances.world>',
         to: email,
         subject: 'Your Resonance Verification Code',
         html: `
