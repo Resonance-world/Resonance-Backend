@@ -102,8 +102,9 @@ router.post('/send-code', sessionAuthMiddleware, async (req: AuthenticatedReques
     }
 
     try {
-      await resend.emails.send({
-        from: 'Resonance <noreply@resonances.world>',
+      console.log(`📧 Attempting to send verification email to: ${email}`);
+      const emailResult = await resend.emails.send({
+        from: 'Resonance <noreply@resonance.world>',
         to: email,
         subject: 'Your Resonance Verification Code',
         html: `
@@ -187,6 +188,8 @@ router.post('/send-code', sessionAuthMiddleware, async (req: AuthenticatedReques
           </html>
         `
       });
+
+      console.log(`✅ Email sent successfully:`, emailResult);
 
       return res.json({
         success: true,
