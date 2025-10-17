@@ -5,7 +5,14 @@ import { Resend } from 'resend';
 import { tokenService } from '../services/blockchain/token.service.js';
 
 const router: Router = Router();
-const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Initialize Resend with proper error handling
+const resendApiKey = process.env.RESEND_API_KEY;
+if (!resendApiKey) {
+  console.warn('⚠️ RESEND_API_KEY not found in environment variables. Email verification will be disabled.');
+}
+
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 interface AuthenticatedRequest extends Request {
   userId?: string;
@@ -75,6 +82,25 @@ router.post('/send-code', sessionAuthMiddleware, async (req: AuthenticatedReques
     });
 
     // Send email with Resend
+    if (!resend) {
+      console.warn('⚠️ Resend not available - email verification disabled');
+      
+      // In development, return success with a mock response
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🔧 Development mode: Mock email sent to ${email} with code ${code}`);
+        return res.json({
+          success: true,
+          message: `Verification code sent to ${email}`,
+          expiresAt: expiresAt.toISOString()
+        });
+      }
+      
+      return res.status(503).json({ 
+        success: false, 
+        error: 'Email service temporarily unavailable' 
+      });
+    }
+
     try {
       await resend.emails.send({
         from: 'Resonance <noreply@resonances.world>',

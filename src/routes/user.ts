@@ -346,4 +346,25 @@ router.get('/search', sessionAuthMiddleware, async (req, res) => {
   }
 });
 
+// Get user's token transactions
+router.get('/:userId/transactions', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const transactions = await prisma.tokenTransaction.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 50 // Limit to last 50 transactions
+    });
+
+    res.json({
+      success: true,
+      transactions
+    });
+  } catch (error) {
+    console.error('❌ Get transactions error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
 export default router; 
