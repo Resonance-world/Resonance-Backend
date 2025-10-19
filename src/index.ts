@@ -11,9 +11,6 @@ import https from 'https';
 import { socketService } from './messages/services/socket-service-singleton.js';
 import { matchSocketService } from './matching/services/match-socket-service-singleton.js';
 
-// Import blockchain services
-import { tokenService } from './services/blockchain/token.service.js';
-
 // Import routes
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/user.js';
@@ -24,7 +21,6 @@ import themesRoutes from './routes/themes.js';
 import deployedPromptsRoutes from './routes/deployedPrompts.js';
 import matchesRoutes from './routes/matches.js';
 import relationshipsRoutes from './routes/relationships.js';
-import emailVerificationRoutes from './routes/email-verification.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -156,7 +152,6 @@ app.use('/api/themes', themesRoutes);
 app.use('/api/deployed-prompts', deployedPromptsRoutes);
 app.use('/api/matches', matchesRoutes);
 app.use('/api/relationships', relationshipsRoutes);
-app.use('/api/email-verification', emailVerificationRoutes);
 
 // Socket.IO connection handling - Using MessagesGateway instead
 // The MessagesGateway handles all WebSocket connections and events
@@ -168,9 +163,6 @@ app.use(errorHandler);
 app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
-
-// Initialize blockchain services
-tokenService.initialize();
 
 server.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);

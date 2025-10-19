@@ -1,12 +1,18 @@
 import { ethers } from 'ethers';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 // RES Token ABI (only the functions we need)
 const RES_TOKEN_ABI = [
-  'function mint(address to, uint256 amount, string memory reason) external',
+  'function mint(address to, uint256 amount, bytes32 allocation, string memory note) external',
   'function balanceOf(address account) external view returns (uint256)',
   'function totalSupply() external view returns (uint256)',
   'function remainingSupply() external view returns (uint256)',
-  'event TokensMinted(address indexed to, uint256 amount, string reason)',
+  'function USER_REWARDS() external view returns (bytes32)',
+  'function getAllocationInfo(bytes32 allocation) external view returns (uint256 limit, uint256 minted, uint256 remaining)',
+  'event TokensMinted(address indexed minter, address indexed recipient, uint256 amount, bytes32 indexed allocation, string publicNote)',
 ];
 
 /**
@@ -102,11 +108,15 @@ class TokenService {
       // Convert amount to wei (18 decimals)
       const amountInWei = ethers.parseEther(amount.toString());
 
+      // Get USER_REWARDS allocation for email verification rewards
+      const userRewardsAllocation = await this.contract!.USER_REWARDS();
+
       console.log(`💎 Minting ${amount} RES to ${toAddress}...`);
       console.log(`   Reason: ${reason}`);
+      console.log(`   Allocation: USER_REWARDS`);
 
-      // Call mint function
-      const tx = await this.contract!.mint(toAddress, amountInWei, reason);
+      // Call mint function with allocation bucket
+      const tx = await this.contract!.mint(toAddress, amountInWei, userRewardsAllocation, reason);
 
       console.log(`⏳ Transaction submitted: ${tx.hash}`);
 
@@ -205,9 +215,44 @@ class TokenService {
       return 0;
     }
   }
+
+  /**
+   * Get USER_REWARDS allocation information
+   * @returns Allocation info (limit, minted, remaining)
+   */
+  async getUserRewardsAllocation(): Promise<{ limit: number; minted: number; remaining: number }> {
+    try {
+      if (!this.isAvailable()) {
+        return {
+          limit: 500000000, // 500M RES
+          minted: 0,
+          remaining: 500000000
+        };
+      }
+
+      const userRewardsAllocation = await this.contract!.USER_REWARDS();
+      const [limit, minted, remaining] = await this.contract!.getAllocationInfo(userRewardsAllocation);
+      
+      return {
+        limit: parseFloat(ethers.formatEther(limit)),
+        minted: parseFloat(ethers.formatEther(minted)),
+        remaining: parseFloat(ethers.formatEther(remaining))
+      };
+    } catch (error: any) {
+      console.error('❌ Error getting USER_REWARDS allocation:', error);
+      return {
+        limit: 500000000,
+        minted: 0,
+        remaining: 500000000
+      };
+    }
+  }
 }
 
 // Export singleton instance
 export const tokenService = new TokenService();
+
+
+
 
 

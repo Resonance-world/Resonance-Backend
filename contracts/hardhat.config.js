@@ -1,5 +1,11 @@
 require("@nomicfoundation/hardhat-toolbox");
-require("dotenv").config({ path: "../.env" });
+
+// Load environment variables if .env exists
+try {
+  require("dotenv").config({ path: "../.env" });
+} catch (e) {
+  // .env file doesn't exist, that's okay for compilation
+}
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {

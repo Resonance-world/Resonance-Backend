@@ -3,6 +3,7 @@ import { authMiddleware } from '../middleware/auth.js';
 import { sessionAuthMiddleware } from '../middleware/sessionAuth.js';
 import { calculateAgeFromString } from '../utils/age.js';
 import { prisma } from '../lib/prisma.js';
+import { tokenService } from '../services/blockchain/token.service.js';
 
 const router: ExpressRouter = Router();
 
@@ -270,6 +271,10 @@ router.get('/:userId', async (req, res) => {
         linkedinHandle: true,
         xHandle: true,
         websiteUrl: true,
+        email: true,
+        emailVerified: true,
+        emailVerifiedAt: true,
+        resTokenBalance: true,
         createdAt: true
       }
     });
@@ -278,7 +283,29 @@ router.get('/:userId', async (req, res) => {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    res.json({ success: true, user });
+    // Fetch real-time token balance from blockchain if user has wallet address
+    let realTimeBalance = user.resTokenBalance;
+    if (user.walletAddress && tokenService.isAvailable()) {
+      try {
+        const blockchainBalance = await tokenService.getBalance(user.walletAddress);
+        realTimeBalance = blockchainBalance.toString();
+        console.log(`💰 Real-time balance for ${user.walletAddress}: ${blockchainBalance} RES`);
+      } catch (error) {
+        console.error('❌ Error fetching real-time balance:', error);
+        // Fall back to database balance
+      }
+    }
+
+    // Create response object with real-time balance
+    const userResponse = {
+      ...user,
+      resTokenBalance: realTimeBalance
+    };
+
+    res.json({ 
+      success: true, 
+      user: userResponse
+    });
   } catch (error) {
     console.error('❌ Get user by ID error:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
