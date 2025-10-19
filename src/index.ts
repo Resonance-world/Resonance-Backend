@@ -21,10 +21,14 @@ import themesRoutes from './routes/themes.js';
 import deployedPromptsRoutes from './routes/deployedPrompts.js';
 import matchesRoutes from './routes/matches.js';
 import relationshipsRoutes from './routes/relationships.js';
+import emailVerificationRoutes from './routes/email-verification.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
 import { logger } from './middleware/logger.js';
+
+// Import services
+import { tokenService } from './services/blockchain/token.service.js';
 
 // Load environment variables
 dotenv.config();
@@ -152,6 +156,7 @@ app.use('/api/themes', themesRoutes);
 app.use('/api/deployed-prompts', deployedPromptsRoutes);
 app.use('/api/matches', matchesRoutes);
 app.use('/api/relationships', relationshipsRoutes);
+app.use('/api/email-verification', emailVerificationRoutes);
 
 // Socket.IO connection handling - Using MessagesGateway instead
 // The MessagesGateway handles all WebSocket connections and events
@@ -169,6 +174,9 @@ server.listen(port, () => {
   console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
   console.log(`📡 Socket.IO enabled`);
   console.log(`🔗 CORS enabled for all origins (development mode)`);
+  
+  // Initialize token service
+  tokenService.initialize();
   
   // Keep-alive mechanism to prevent Render free tier hibernation
   if (process.env.NODE_ENV === 'production') {
